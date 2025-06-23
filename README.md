@@ -4,7 +4,7 @@ A production-ready, real-time coding competition platform. Compete with friends 
 
 ---
 
-## 🚀 Features (2024)
+## 🚀 Features 
 
 - **Real-time Multiplayer Rooms**: Join, create, or enter rooms for live coding battles
 - **AI-Generated Problems**: Every game features a unique, automatically generated coding challenge (Google Gemini)
@@ -137,20 +137,6 @@ node socket-server.js # Socket.IO server (port 3003)
 - **Mobile Friendly**: Works great on all devices
 - **About Page**: `/about` for a full project summary
 
----
-
-## 🏷️ Badges
-
-![Next.js](https://img.shields.io/badge/Next.js-15-blue)
-![React](https://img.shields.io/badge/React-19-blue)
-![Prisma](https://img.shields.io/badge/Prisma-ORM-green)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-DB-blue)
-![Socket.IO](https://img.shields.io/badge/Socket.IO-RealTime-black)
-![Gemini](https://img.shields.io/badge/Gemini-AI-yellow)
-![Clerk](https://img.shields.io/badge/Clerk-Auth-orange)
-![Tailwind](https://img.shields.io/badge/Tailwind-CSS-blue)
-
----
 
 ## ❓ FAQ & Troubleshooting
 
@@ -166,19 +152,6 @@ A: Yes! Update the code editor and AI prompt to support more languages.
 **Q: How do I deploy?**
 A: This project is already deployed, but you can use Vercel for the Next.js app and any Node server for Socket.IO.
 
----
-
-## 🤝 Contributing
-
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
-
----
-
-## 📝 License
-
-MIT License. See [LICENSE](LICENSE) for details.
-
----
 
 ## 🙏 Credits
 
@@ -187,4 +160,3 @@ MIT License. See [LICENSE](LICENSE) for details.
 - Prisma & PostgreSQL for database
 - Socket.IO for real-time features
 - shadcn/ui & Tailwind for UI
-- All contributors and testers! 
