@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id
+  clerkId      String   @unique @map("clerk_id")
+  username     String   @unique
+  email        String
+  avatarUrl    String?  @map("avatar_url")
+  totalScore   Int      @default(0) @map("total_score")
+  gamesPlayed  Int      @default(0) @map("games_played")
+  gamesWon     Int      @default(0) @map("games_won")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  createdRooms     Room[]            @relation("RoomCreator")
+  gameParticipants GameParticipant[]
+  submissions      Submission[]
+  leaderboards     Leaderboard[]
+  wonGames         Game[]            @relation("GameWinner")
+
+  @@map("users")
+}
+
+model Room {
+  id             String   @id
+  name           String
+  description    String?
+  isPrivate      Boolean  @default(false) @map("is_private")
+  password       String?
+  joinCode       String?  @unique @map("join_code") // Make it optional first
+  maxPlayers     Int      @default(4) @map("max_players")
+  currentPlayers Int      @default(0) @map("current_players")
+  status         String   @default("waiting") // waiting, in_progress, finished
+  createdBy      String   @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  creator User   @relation("RoomCreator", fields: [createdBy], references: [id])
+  games   Game[]
+
+  @@map("rooms")
+}
+
+model Game {
+  id                   String    @id
+  roomId               String    @map("room_id")
+  challengeTitle       String    @map("challenge_title")
+  challengeDescription String    @map("challenge_description")
+  challengeExamples    String    @map("challenge_examples")
+  difficulty           String    @default("medium")
+  status               String    @default("active") // active, finished
+  winnerId             String?   @map("winner_id")
+  startedAt            DateTime  @default(now()) @map("started_at")
+  endedAt              DateTime? @map("ended_at")
+  durationSeconds      Int       @default(300) @map("duration_seconds")
+
+  // Relations
+  room         Room              @relation(fields: [roomId], references: [id])
+  winner       User?             @relation("GameWinner", fields: [winnerId], references: [id])
+  participants GameParticipant[]
+  submissions  Submission[]
+  leaderboards Leaderboard[]
+
+  @@map("games")
+}
+
+model GameParticipant {
+  id       String   @id
+  gameId   String   @map("game_id")
+  userId   String   @map("user_id")
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  // Relations
+  game Game @relation(fields: [gameId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([gameId, userId])
+  @@map("game_participants")
+}
+
+model Submission {
+  id              String   @id
+  gameId          String   @map("game_id")
+  userId          String   @map("user_id")
+  code            String
+  language        String   @default("javascript")
+  isCorrect       Boolean  @default(false) @map("is_correct")
+  aiFeedback      String?  @map("ai_feedback")
+  timeComplexity  String?  @map("time_complexity")
+  spaceComplexity String?  @map("space_complexity")
+  score           Int      @default(0)
+  submittedAt     DateTime @default(now()) @map("submitted_at")
+
+  // Relations
+  game Game @relation(fields: [gameId], references: [id])
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("submissions")
+}
+
+model Leaderboard {
+  id             String    @id
+  userId         String    @map("user_id")
+  gameId         String    @map("game_id")
+  rank           Int
+  score          Int
+  submissionTime DateTime? @map("submission_time")
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+  game Game @relation(fields: [gameId], references: [id])
+
+  @@map("leaderboards")
+}
