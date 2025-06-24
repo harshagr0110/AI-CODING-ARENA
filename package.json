@@ -7,7 +7,9 @@
     "dev": "next dev",
     "lint": "next lint",
     "start": "next start",
-    "socket-server": "node socket-server.js"
+    "socket-server": "node socket-server.js",
+    "postinstall": "prisma generate",
+    "db-push": "npx prisma db push"
   },
   "dependencies": {
     "@clerk/nextjs": "latest",
