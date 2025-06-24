@@ -29,10 +29,11 @@ export function useSocket() {
 
         if (!isMounted) return
 
-        // Connect to the Socket.IO server on port 3003
-        const socketUrl = process.env.NODE_ENV === "production"
-          ? window.location.origin.replace(/:\d+/, ":3003") // Replace port with 3003
-          : "http://localhost:3003"; // Socket server on port 3003
+        // Connect to the Socket.IO server using the environment variable if available
+        const socketUrl = process.env.NEXT_PUBLIC_SOCKET_IO_URL ||
+          (process.env.NODE_ENV === "production"
+            ? window.location.origin.replace(/:\d+/, ":3003")
+            : "http://localhost:3003");
 
         socketRef.current = io(socketUrl, {
           transports: ["polling", "websocket"],
