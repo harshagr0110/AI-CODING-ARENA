@@ -40,7 +40,7 @@ export async function LiveLeaderboard({ gameId }: LiveLeaderboardProps) {
         <CardHeader>
           <CardTitle className="flex items-center space-x-2">
             <Trophy className="h-5 w-5 text-yellow-500" />
-            <span>Live Leaderboard</span>
+            <span>LIVE LEADERBOARD</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -79,7 +79,7 @@ export async function LiveLeaderboard({ gameId }: LiveLeaderboardProps) {
         </CardHeader>
         <CardContent>
           {submissions.length === 0 ? (
-            <p className="text-gray-500 text-center py-4">No submissions yet</p>
+            <p className="text-gray-500 text-center py-4">No submissions</p>
           ) : (
             <div className="space-y-2">
               {submissions.slice(0, 5).map((submission) => (
