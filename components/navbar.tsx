@@ -20,7 +20,7 @@ export function Navbar() {
   const pathname = usePathname()
 
   return (
-    <nav className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-50 dark:bg-gray-900/80 dark:border-gray-800">
+    <nav className="bg-white/80 backdrop-blur-sm border-b sticky top-0 z-50 dark:bg-gray-800/80 dark:border-gray-800">
       <div className="container mx-auto px-4">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -84,7 +84,7 @@ export function Navbar() {
 
         {/* Mobile Navigation */}
         {mobileMenuOpen && (
-          <div className="md:hidden border-t dark:border-gray-800">
+          <div className="md:hidden border-t dark:border-gray-900">
             <div className="px-2 pt-2 pb-3 space-y-1">
               {navigation.map((item) => {
                 const Icon = item.icon

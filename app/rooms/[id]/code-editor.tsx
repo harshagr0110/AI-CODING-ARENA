@@ -112,7 +112,7 @@ export function CodeEditor({ roomId, gameId, userId, hasSubmitted, existingSubmi
     } catch (error) {
       toast({
         title: "Submission Error",
-        description: error instanceof Error ? error.message : "Failed to submit code",
+        description: error instanceof Error ? error.message : "Failed to submit",
         variant: "destructive",
         duration: 5000,
       })

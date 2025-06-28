@@ -222,7 +222,7 @@ export default async function RoomPage({ params }: Props) {
                       <p className="text-gray-500 mb-6">
                         {allPlayers.length < 2
                           ? "Waiting for more players to join..."
-                          : "All players are here. Ready to begin the coding challenge!"}
+                          : "All players are here. Ready to begin the challenge!"}
                       </p>
                       <StartGameButton
                         roomId={id}
