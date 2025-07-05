@@ -90,7 +90,7 @@ export default async function RoomPage({ params }: Props) {
                 <p className="text-gray-600">{room.description}</p>
                 <div className="flex items-center space-x-2 mt-2">
                   <span>Code: {room.joinCode}</span>
-                  <span>{room.status === "waiting" ? "waiting" : "active"}</span>
+                  <span>{room.status}</span>
                 </div>
               </div>
               <div className="flex items-center space-x-2">

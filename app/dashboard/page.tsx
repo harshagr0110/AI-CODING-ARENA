@@ -31,9 +31,6 @@ export default async function DashboardPage() {
   const activeRooms = await prisma.room.findMany({
     where: {
       status: "waiting",
-      currentPlayers: {
-        lt: prisma.room.fields.maxPlayers,
-      },
       isPrivate: false,
     },
     include: {
@@ -42,6 +39,7 @@ export default async function DashboardPage() {
           username: true,
         },
       },
+      participants: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -54,12 +52,7 @@ export default async function DashboardPage() {
       createdBy: user.id,
     },
     include: {
-      games: {
-        where: {
-          status: "active",
-        },
-        take: 1,
-      },
+      participants: true,
     },
     orderBy: {
       createdAt: "desc",
@@ -175,7 +168,7 @@ export default async function DashboardPage() {
                           <div>
                             <h4 className="font-medium">{room.name}</h4>
                             <p className="text-sm text-gray-500">
-                              {room.currentPlayers}/{room.maxPlayers} players
+                              {room.participants.length}/{room.maxPlayers} players
                             </p>
                             <p className="text-xs text-gray-400">by {room.creator.username}</p>
                           </div>
@@ -209,7 +202,7 @@ export default async function DashboardPage() {
                             <div>
                               <h4 className="font-medium">{room.name}</h4>
                               <p className="text-sm text-gray-500">
-                                {room.currentPlayers}/{room.maxPlayers} players • {room.status}
+                                {room.participants?.length || 0}/{room.maxPlayers} players • {room.status}
                               </p>
                               <p className="text-xs text-gray-400">
                                 Created {new Date(room.createdAt).toLocaleDateString()}

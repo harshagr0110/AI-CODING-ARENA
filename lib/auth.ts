@@ -27,7 +27,6 @@ export async function getCurrentUser() {
           clerkId: userId,
           username: clerkUser.username || clerkUser.email_addresses[0].email_address.split("@")[0],
           email: clerkUser.email_addresses[0].email_address,
-          avatarUrl: clerkUser.image_url,
         },
       })
     } catch (error) {
