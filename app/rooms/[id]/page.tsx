@@ -24,7 +24,7 @@ export default async function RoomPage({ params }: Props) {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect("/sign-in")
+    redirect("/")
   }
 
   const room = await prisma.room.findUnique({
@@ -107,7 +107,7 @@ export default async function RoomPage({ params }: Props) {
           {/* Game timer */}
           {hasRealChallenge && isGameInProgress && room.startedAt && (
             <SmallGameTimer
-              startedAt={typeof room.startedAt === 'string' ? room.startedAt : room.startedAt.toISOString()}
+              startedAt={room.startedAt instanceof Date ? room.startedAt.toISOString() : room.startedAt}
               durationSeconds={room.durationSeconds ?? 0}
             />
           )}
@@ -135,7 +135,7 @@ export default async function RoomPage({ params }: Props) {
                         <div>
                           <h4 className="font-medium mb-2">💡 Examples</h4>
                           <div className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
-                            {JSON.parse(room.challengeExamples || '[]').map((example: any, index: number) => (
+                            {(room.challengeExamples ? JSON.parse(room.challengeExamples) : []).map((example: any, index: number) => (
                               <div key={index} className="mb-3 last:mb-0">
                                 <div className="font-medium text-gray-800">Example {index + 1}:</div>
                                 <div className="mt-1">

@@ -12,7 +12,7 @@ export default async function LeaderboardPage() {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect("/sign-in")
+    redirect("/")
   }
 
   const topPlayers = await prisma.user.findMany({
@@ -48,7 +48,7 @@ export default async function LeaderboardPage() {
     take: 10,
   })
 
-  const userRank = topPlayers.findIndex((player) => player.id === user.id) + 1
+  const userRank = topPlayers.findIndex((player: any) => player.id === user.id) + 1
 
   return (
     <MainLayout>
@@ -101,7 +101,7 @@ export default async function LeaderboardPage() {
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {topPlayers.map((player, index) => (
+                  {topPlayers.map((player: any, index: number) => (
                     <div
                       key={player.id}
                       className={`flex items-center justify-between p-3 rounded-lg border ${
@@ -147,7 +147,7 @@ export default async function LeaderboardPage() {
                 <p className="text-gray-500 text-center py-8">No recent games found</p>
               ) : (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {recentRooms.map((room) => (
+                  {recentRooms.map((room: any) => (
                     <Link key={room.id} href={`/rooms/${room.id}`} className="block p-4 border rounded-lg hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-2">
                         <div>

@@ -12,7 +12,7 @@ import { DeleteRoomCardButton } from "./delete-room-card-button"
 
 export default async function RoomsPage() {
   const user = await getCurrentUser()
-  if (!user) redirect("/sign-in")
+  if (!user) redirect("/")
 
   // Fetch latest 5 active rooms (anyone's)
   const activeRooms = await prisma.room.findMany({

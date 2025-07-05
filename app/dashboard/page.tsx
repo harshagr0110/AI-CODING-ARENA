@@ -15,8 +15,11 @@ export default async function DashboardPage() {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect("/sign-in")
+    redirect("/")
   }
+
+  // Debug logging
+  console.log("Dashboard user:", user)
 
   const stats = {
     totalGames: user.gamesPlayed,

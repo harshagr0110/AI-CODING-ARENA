@@ -9,7 +9,7 @@ import { Suspense } from "react"
 
 export default function HomePage() {
   return (
-    <MainLayout showBreadcrumb={false}>
+    <MainLayout>
       <Suspense fallback={<div className="container mx-auto px-4 py-16"><Skeleton className="h-96 w-full mb-8" /><Skeleton className="h-32 w-full mb-8" /><Skeleton className="h-32 w-full mb-8" /></div>}>
         <div className="bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
           <div className="container mx-auto px-4 py-16">
@@ -20,7 +20,7 @@ export default function HomePage() {
                 real-time competitions.
               </p>
               <SignedOut>
-                <SignInButton>
+                <SignInButton mode="modal">
                   <Button size="lg" className="bg-blue-600 hover:bg-blue-700">
                     Start Competing
                   </Button>

@@ -18,7 +18,7 @@ export default async function GameResultsPage({ params }: Props) {
   const user = await getCurrentUser()
 
   if (!user) {
-    redirect("/sign-in")
+    redirect("/")
   }
 
   // Use Room instead of Game

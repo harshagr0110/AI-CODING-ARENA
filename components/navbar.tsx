@@ -56,7 +56,7 @@ export function Navbar() {
           {/* Desktop Auth */}
           <div className="hidden md:flex items-center space-x-4">
             <SignedOut>
-              <SignInButton>
+              <SignInButton mode="modal">
                 <Button>Sign In</Button>
               </SignInButton>
             </SignedOut>
@@ -107,7 +107,7 @@ export function Navbar() {
               })}
               <div className="pt-4 border-t dark:border-gray-800">
                 <SignedOut>
-                  <SignInButton>
+                  <SignInButton mode="modal">
                     <Button className="w-full">Sign In</Button>
                   </SignInButton>
                 </SignedOut>
