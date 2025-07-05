@@ -56,9 +56,9 @@ export default async function RoomPage({ params }: Props) {
   }
 
   const isHost = room.creator.id === user.id
-  const isUserInRoom = room.participants.some((p) => p.user.id === user.id) || isHost
+  const isUserInRoom = room.participants.some((p: any) => p.user.id === user.id) || isHost
   const participantCount = room.participants.length
-  const allPlayers = [room.creator, ...room.participants.map((p) => p.user)]
+  const allPlayers = [room.creator, ...room.participants.map((p: any) => p.user)]
   const hasRealChallenge = room.challengeTitle && room.challengeTitle !== "Waiting for challenge..."
 
   // Check if user has submitted

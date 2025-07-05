@@ -40,7 +40,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Check if user is already in the room
-    const existingParticipant = room.participants.find(p => p.user.id === user.id)
+    const existingParticipant = room.participants.find((p: any) => p.user.id === user.id)
     if (existingParticipant) {
       return NextResponse.json({ message: "Already in room" })
     }
