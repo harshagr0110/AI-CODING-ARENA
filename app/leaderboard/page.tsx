@@ -27,11 +27,11 @@ export default async function LeaderboardPage() {
     },
   })
 
-  const recentGames = await prisma.game.findMany({
+  const recentRooms = await prisma.room.findMany({
     where: {
-      status: "active",
+      status: { in: ["in_progress", "finished"] },
       challengeTitle: {
-        not: "Waiting for challenge...",
+        not: null,
       },
     },
     include: {
@@ -40,16 +40,7 @@ export default async function LeaderboardPage() {
           username: true,
         },
       },
-      room: {
-        select: {
-          name: true,
-        },
-      },
-      _count: {
-        select: {
-          participants: true,
-        },
-      },
+      participants: true,
     },
     orderBy: {
       startedAt: "desc",
@@ -152,30 +143,30 @@ export default async function LeaderboardPage() {
               <CardDescription>Latest completed and ongoing matches</CardDescription>
             </CardHeader>
             <CardContent>
-              {recentGames.length === 0 ? (
+              {recentRooms.length === 0 ? (
                 <p className="text-gray-500 text-center py-8">No recent games found</p>
               ) : (
                 <div className="grid md:grid-cols-2 gap-4">
-                  {recentGames.map((game) => (
-                    <Link key={game.id} href={`/games/${game.id}/results`} className="block p-4 border rounded-lg hover:shadow-md transition-shadow">
+                  {recentRooms.map((room) => (
+                    <Link key={room.id} href={`/rooms/${room.id}`} className="block p-4 border rounded-lg hover:shadow-md transition-shadow">
                       <div className="flex items-start justify-between mb-2">
                         <div>
-                          <h4 className="font-medium text-sm">{game.challengeTitle}</h4>
-                          <p className="text-xs text-gray-500">Room: {game.room.name}</p>
+                          <h4 className="font-medium text-sm">{room.challengeTitle}</h4>
+                          <p className="text-xs text-gray-500">Room: {room.name}</p>
                         </div>
                         <Badge variant="secondary" className="text-xs">
-                          {game._count.participants + 1} players
+                          {room.participants.length} players
                         </Badge>
                       </div>
                       <div className="flex items-center justify-between text-xs text-gray-500">
                         <div className="flex items-center space-x-1">
                           <Clock className="h-3 w-3" />
-                          <span>{new Date(game.startedAt).toLocaleString()}</span>
+                          <span>{room.startedAt ? new Date(room.startedAt).toLocaleString() : "Not started"}</span>
                         </div>
-                        {game.winner && (
+                        {room.winner && (
                           <div className="flex items-center space-x-1">
                             <Trophy className="h-3 w-3 text-yellow-500" />
-                            <span>Winner: {game.winner.username}</span>
+                            <span>Winner: {room.winner.username}</span>
                           </div>
                         )}
                       </div>

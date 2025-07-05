@@ -21,22 +21,22 @@ export default async function GameResultsPage({ params }: Props) {
     redirect("/sign-in")
   }
 
-  const game = await prisma.game.findUnique({
+  // Use Room instead of Game
+  const room = await prisma.room.findUnique({
     where: { id },
     select: {
       id: true,
       challengeTitle: true,
       challengeDescription: true,
+      challengeExamples: true,
       durationSeconds: true,
       startedAt: true,
       endedAt: true,
       status: true,
-      room: {
-        select: {
-          name: true,
-          creator: { select: { username: true } },
-        },
-      },
+      name: true,
+      difficulty: true,
+      maxPlayers: true,
+      creator: { select: { username: true } },
       winner: { select: { username: true } },
       participants: {
         select: {
@@ -57,22 +57,10 @@ export default async function GameResultsPage({ params }: Props) {
         orderBy: { score: "desc" },
         take: 10,
       },
-      leaderboards: {
-        select: {
-          id: true,
-          userId: true,
-          score: true,
-          rank: true,
-          submissionTime: true,
-          user: { select: { username: true } },
-        },
-        orderBy: { rank: "asc" },
-        take: 10,
-      },
     },
   })
 
-  if (!game) {
+  if (!room) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <Card>
@@ -87,10 +75,17 @@ export default async function GameResultsPage({ params }: Props) {
     )
   }
 
-  const userSubmission = game.submissions.find((s) => s.userId === user.id)
-  const gameDuration = game.endedAt
-    ? ((new Date(game.endedAt).getTime() - new Date(game.startedAt).getTime()) / 1000 / 60).toFixed(2)
-    : (game.durationSeconds / 60).toFixed(2)
+  // Find user submission
+  const userSubmission = room.submissions.find((s: typeof room.submissions[0]) => s.userId === user.id)
+  const gameDuration = room.endedAt
+    ? ((new Date(room.endedAt).getTime() - new Date(room.startedAt!).getTime()) / 1000 / 60).toFixed(2)
+    : (room.durationSeconds! / 60).toFixed(2)
+
+  // Compute leaderboard: sort by score desc, then by submittedAt asc
+  const leaderboard = [...room.submissions]
+    .filter((s) => s.isCorrect)
+    .sort((a, b) => b.score - a.score || new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
+    .map((entry, index) => ({ ...entry, rank: index + 1 }))
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -99,9 +94,9 @@ export default async function GameResultsPage({ params }: Props) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Game Results</h1>
-              <p className="text-gray-600">{game.challengeTitle}</p>
+              <p className="text-gray-600">{room.challengeTitle}</p>
             </div>
-            <Badge variant={game.status === "finished" ? "outline" : "default"}>{game.status}</Badge>
+            <Badge variant={room.status === "finished" ? "outline" : "default"}>{room.status}</Badge>
           </div>
         </div>
       </header>
@@ -111,20 +106,20 @@ export default async function GameResultsPage({ params }: Props) {
         <Card className="mb-8">
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <span>🎯 {game.challengeTitle}</span>
-              <span>{game.status}</span>
+              <span>🎯 {room.challengeTitle}</span>
+              <span>{room.status}</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
               <div>
                 <h4 className="font-medium mb-2">📝 Problem Description</h4>
-                <p className="text-gray-700 whitespace-pre-wrap">{game.challengeDescription}</p>
+                <p className="text-gray-700 whitespace-pre-wrap">{room.challengeDescription}</p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">💡 Examples</h4>
                 <div className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
-                  {JSON.parse(game.challengeExamples || '[]').map((example: any, index: number) => (
+                  {JSON.parse(room.challengeExamples || '[]').map((example: any, index: number) => (
                     <div key={index} className="mb-3 last:mb-0">
                       <div className="font-medium text-gray-800">Example {index + 1}:</div>
                       <div className="mt-1">
@@ -161,11 +156,11 @@ export default async function GameResultsPage({ params }: Props) {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Room:</span>
-                  <span className="text-sm font-medium">{game.room.name}</span>
+                  <span className="text-sm font-medium">{room.name}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Host:</span>
-                  <span className="text-sm font-medium">{game.room.creator.username}</span>
+                  <span className="text-sm font-medium">{room.creator.username}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Duration:</span>
@@ -173,12 +168,12 @@ export default async function GameResultsPage({ params }: Props) {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Players:</span>
-                  <span className="text-sm font-medium">{game.participants.length + 1}</span>
+                  <span className="text-sm font-medium">{room.participants.length + 1}</span>
                 </div>
-                {game.winner && (
+                {room.winner && (
                   <div className="flex justify-between">
                     <span className="text-sm text-gray-600">Winner:</span>
-                    <span className="text-sm font-medium">{game.winner.username}</span>
+                    <span className="text-sm font-medium">{room.winner.username}</span>
                   </div>
                 )}
               </div>
@@ -194,11 +189,11 @@ export default async function GameResultsPage({ params }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {game.leaderboards.length === 0 ? (
+              {leaderboard.length === 0 ? (
                 <p className="text-gray-500 text-center py-4">No correct submissions</p>
               ) : (
                 <div className="space-y-3">
-                  {game.leaderboards.map((entry, index) => (
+                  {leaderboard.map((entry, index) => (
                     <div
                       key={entry.id}
                       className={`flex items-center justify-between p-2 rounded ${

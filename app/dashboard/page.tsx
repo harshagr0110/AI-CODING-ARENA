@@ -31,6 +31,7 @@ export default async function DashboardPage() {
       currentPlayers: {
         lt: prisma.room.fields.maxPlayers,
       },
+      isPrivate: false,
     },
     include: {
       creator: {
@@ -62,6 +63,9 @@ export default async function DashboardPage() {
     },
     take: 5,
   })
+
+  // Debug logging
+  console.log("Dashboard active rooms:", activeRooms)
 
   return (
     <MainLayout>

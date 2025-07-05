@@ -3,7 +3,6 @@
 import { useEffect } from "react"
 import { useSocket } from "@/hooks/use-socket"
 import { useRouter } from "next/navigation"
-import type React from "react"
 
 interface RoomRealtimeProps {
   roomId: string
@@ -17,42 +16,24 @@ export function RoomRealtime({ roomId, userId, children }: RoomRealtimeProps) {
 
   useEffect(() => {
     if (socket && isConnected) {
-      console.log(`🚪 Joining room ${roomId} as user ${userId}`)
+      // Join the room
       socket.emit("join-room", { roomId, userId })
 
       // Listen for game events
-      const handleGameStarted = (data: any) => {
-        console.log("🎮 Game started:", data.gameId)
-        // Force a page refresh to ensure all components are updated
+      socket.on("game-started", () => {
         window.location.reload()
-      }
+      })
 
-      const handleGameEnded = (data: any) => {
-        console.log("🏁 Game ended:", data.reason)
-        // Navigate to results page instead of reloading
-        router.push(`/games/${data.gameId}/results`)
-      }
+      socket.on("game-ended", (data: any) => {
+        router.push(`/rooms/${data.roomId}`)
+      })
 
-      const handleSubmissionUpdate = (data: any) => {
-        console.log("📝 Submission update:", data.newSubmission?.userId)
-      }
+      socket.on("submission-update", () => {
+        router.refresh()
+      })
 
-      const handleRoomDeleted = (data: any) => {
-        console.log("🗑️ Room deleted:", data.roomName)
-        // Redirect to rooms page with a message
-        router.push("/rooms?deleted=true")
-      }
-
-      socket.on("game-started", handleGameStarted)
-      socket.on("game-ended", handleGameEnded)
-      socket.on("submission-update", handleSubmissionUpdate)
-      socket.on("room-deleted", handleRoomDeleted)
-
+      // Cleanup when component unmounts
       return () => {
-        socket.off("game-started", handleGameStarted)
-        socket.off("game-ended", handleGameEnded)
-        socket.off("submission-update", handleSubmissionUpdate)
-        socket.off("room-deleted", handleRoomDeleted)
         socket.emit("leave-room", { roomId })
       }
     }

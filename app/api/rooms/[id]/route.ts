@@ -19,13 +19,25 @@ export async function POST(request: NextRequest, { params }: Props) {
 
     const room = await prisma.room.findUnique({
       where: { id },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 })
     }
 
-    if (room.currentPlayers >= room.maxPlayers) {
+    if (room.participants.length >= room.maxPlayers) {
       return NextResponse.json({ error: "Room is full" }, { status: 400 })
     }
 
@@ -34,58 +46,16 @@ export async function POST(request: NextRequest, { params }: Props) {
     }
 
     // Check if user is already in the room
-    const existingParticipant = await prisma.gameParticipant.findFirst({
-      where: {
-        userId: user.id,
-        game: {
-          roomId: id,
-          status: "active",
-        },
-      },
-    })
-
+    const existingParticipant = room.participants.find(p => p.user.id === user.id)
     if (existingParticipant) {
       return NextResponse.json({ message: "Already in room" })
     }
 
-    // Create or get active game for this room
-    let activeGame = await prisma.game.findFirst({
-      where: {
-        roomId: id,
-        status: "active",
-      },
-    })
-
-    if (!activeGame) {
-      // Create a new game session for this room
-      activeGame = await prisma.game.create({
-        data: {
-          id: crypto.randomUUID(),
-          roomId: id,
-          challengeTitle: "Waiting for challenge...",
-          challengeDescription: "Game will start soon",
-          challengeExamples: "[]",
-          status: "active",
-        },
-      })
-    }
-
     // Add user as participant
-    await prisma.gameParticipant.create({
+    await prisma.roomParticipant.create({
       data: {
-        id: crypto.randomUUID(),
-        gameId: activeGame.id,
+        roomId: id,
         userId: user.id,
-      },
-    })
-
-    // Update room player count
-    await prisma.room.update({
-      where: { id },
-      data: {
-        currentPlayers: {
-          increment: 1,
-        },
       },
     })
 
@@ -116,23 +86,15 @@ export async function GET(
           username: true,
         },
       },
-      games: {
-        where: {
-          status: "active",
-        },
+      participants: {
         include: {
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                },
-              },
+          user: {
+            select: {
+              id: true,
+              username: true,
             },
           },
         },
-        take: 1,
       },
     },
   })
@@ -165,6 +127,7 @@ export async function DELETE(
             id: true,
           },
         },
+        participants: true,
       },
     })
 
@@ -176,34 +139,21 @@ export async function DELETE(
       return NextResponse.json({ error: "Only the room creator can delete the room" }, { status: 403 })
     }
 
+    // Check if there are participants in the room
+    if (room.participants.length > 0) {
+      return NextResponse.json({ error: "Cannot delete room with active participants" }, { status: 400 })
+    }
+
     // Delete the room and all associated data
     await prisma.$transaction([
-      // Delete leaderboards
-      prisma.leaderboard.deleteMany({
-        where: {
-          game: {
-            roomId: id,
-          },
-        },
-      }),
       // Delete submissions
       prisma.submission.deleteMany({
         where: {
-          game: {
-            roomId: id,
-          },
+          roomId: id,
         },
       }),
-      // Delete game participants
-      prisma.gameParticipant.deleteMany({
-        where: {
-          game: {
-            roomId: id,
-          },
-        },
-      }),
-      // Delete games
-      prisma.game.deleteMany({
+      // Delete room participants
+      prisma.roomParticipant.deleteMany({
         where: {
           roomId: id,
         },

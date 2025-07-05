@@ -8,14 +8,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { useToast } from "@/hooks/use-toast"
 
 export function JoinByCode() {
   const [joinCode, setJoinCode] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const { toast } = useToast()
   const router = useRouter()
 
   const handleJoinByCode = async (e: React.FormEvent) => {
@@ -40,27 +38,17 @@ export function JoinByCode() {
       if (!response.ok) {
         if (response.status === 401 && data.error === "Invalid password") {
           setShowPassword(true)
-          toast({
-            title: "Password Required",
-            description: "This is a private room. Please enter the password.",
-          })
+          window.alert("This is a private room. Please enter the password.")
           return
         }
         throw new Error(data.error || "Failed to join room")
       }
 
-      toast({
-        title: "Success!",
-        description: "Joining room...",
-      })
+      window.alert("Joining room...")
 
       router.push(`/rooms/${data.roomId}`)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to join room",
-        variant: "destructive",
-      })
+      window.alert(error instanceof Error ? error.message : "Failed to join room")
     } finally {
       setLoading(false)
     }

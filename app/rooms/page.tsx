@@ -9,52 +9,39 @@ import Link from "next/link"
 import { MainLayout } from "@/components/main-layout"
 import { JoinByCode } from "./join-by-code"
 import { DeleteRoomCardButton } from "./delete-room-card-button"
-import { RoomDeletedToast } from "./room-deleted-toast"
 
 export default async function RoomsPage() {
   const user = await getCurrentUser()
   if (!user) redirect("/sign-in")
 
-  // Find all room IDs where user is a participant in any game
-  const participantGameRooms = await prisma.gameParticipant.findMany({
-    where: { userId: user.id },
-    select: { game: { select: { roomId: true } } },
-  })
-  const joinedRoomIds = [
-    ...new Set([
-      ...participantGameRooms.map((gp) => gp.game.roomId),
-    ]),
-  ]
-  // Add rooms the user created
-  const createdRooms = await prisma.room.findMany({
-    where: { createdBy: user.id },
-    select: { id: true },
-  })
-  for (const r of createdRooms) {
-    if (!joinedRoomIds.includes(r.id)) joinedRoomIds.push(r.id)
-  }
-  // Fetch all joined rooms
-  const rooms = await prisma.room.findMany({
-    where: { id: { in: joinedRoomIds } },
-    select: {
-      id: true,
-      name: true,
-      description: true,
-      isPrivate: true,
-      joinCode: true,
-      maxPlayers: true,
-      currentPlayers: true,
-      status: true,
-      createdAt: true,
-      createdBy: true,
+  // Fetch latest 5 active rooms (anyone's)
+  const activeRooms = await prisma.room.findMany({
+    where: { 
+      status: { in: ["waiting", "in_progress"] },
+      isPrivate: false 
+    },
+    include: {
       creator: { select: { username: true } },
-      _count: { select: { games: true } },
+      participants: true,
     },
     orderBy: { createdAt: "desc" },
-    take: 20,
+    take: 5,
   })
-  const activeRooms = rooms.filter((room: any) => room.status === "waiting" || room.status === "in_progress")
-  const finishedRooms = rooms.filter((room: any) => room.status === "finished")
+
+  // Fetch latest 5 finished rooms (anyone's)
+  const finishedRooms = await prisma.room.findMany({
+    where: { status: "finished" },
+    include: {
+      creator: { select: { username: true } },
+      participants: true,
+    },
+    orderBy: { createdAt: "desc" },
+    take: 5,
+  })
+
+  // Debug logging
+  // console.log("Active rooms:", activeRooms)
+  // console.log("Finished rooms:", finishedRooms)
 
   return (
     <MainLayout>
@@ -69,12 +56,11 @@ export default async function RoomsPage() {
               <Button>Create Room</Button>
             </Link>
           </div>
-          <RoomDeletedToast />
           <div className="grid lg:grid-cols-4 gap-6 mb-8">
             <JoinByCode />
           </div>
           <div className="grid gap-6">
-            {rooms.length === 0 ? (
+            {activeRooms.length === 0 && finishedRooms.length === 0 ? (
               <Card>
                 <CardContent className="text-center py-12">
                   <h3 className="text-lg font-medium text-gray-900 mb-2">No rooms joined</h3>
@@ -122,7 +108,7 @@ export default async function RoomsPage() {
                                 <div className="flex items-center space-x-1">
                                   <Users className="h-4 w-4 text-gray-500" />
                                   <span>
-                                    {room.currentPlayers}/{room.maxPlayers} players
+                                    {room.participants.length}/{room.maxPlayers} players
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-1">
@@ -135,9 +121,6 @@ export default async function RoomsPage() {
                                 <span className="font-mono text-blue-600">{room.joinCode}</span>
                               </div>
                               <div className="text-xs text-gray-500">Created by {room.creator.username}</div>
-                              <div className="text-xs text-gray-400">
-                                {room._count.games} game{room._count.games !== 1 ? "s" : ""} played
-                              </div>
                               <div className="pt-2">
                                 <Link href={`/rooms/${room.id}`}>
                                   <Button
@@ -189,7 +172,7 @@ export default async function RoomsPage() {
                                 <div className="flex items-center space-x-1">
                                   <Users className="h-4 w-4 text-gray-500" />
                                   <span>
-                                    {room.currentPlayers}/{room.maxPlayers} players
+                                    {room.participants.length}/{room.maxPlayers} players
                                   </span>
                                 </div>
                                 <div className="flex items-center space-x-1">
@@ -202,9 +185,6 @@ export default async function RoomsPage() {
                                 <span className="font-mono text-blue-600">{room.joinCode}</span>
                               </div>
                               <div className="text-xs text-gray-500">Created by {room.creator.username}</div>
-                              <div className="text-xs text-gray-400">
-                                {room._count.games} game{room._count.games !== 1 ? "s" : ""} played
-                              </div>
                               <div className="pt-2">
                                 <Link href={`/rooms/${room.id}`}>
                                   <Button

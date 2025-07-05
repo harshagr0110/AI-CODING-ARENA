@@ -1,13 +1,13 @@
 import type React from "react"
 import { ClerkProvider } from "@clerk/nextjs"
 import { Inter } from "next/font/google"
-import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from "@/components/theme-provider"
 import "./globals.css"
+import { Metadata } from "next"
 
 const inter = Inter({ subsets: ["latin"] })
 
-export const metadata = {
+export const metadata : Metadata = {
   title: "AI Coding Arena - Multiplayer Coding Competitions",
   description: "Compete in real-time coding challenges powered by AI. Join multiplayer coding battles with instant feedback and smart scoring.",
   keywords: "coding, competition, multiplayer, AI, programming, challenges, real-time",
@@ -51,7 +51,6 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             {children}
-            <Toaster />
           </ThemeProvider>
         </body>
       </html>

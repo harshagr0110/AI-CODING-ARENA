@@ -4,7 +4,6 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { useToast } from "@/hooks/use-toast"
 
 interface RoomClientProps {
   roomId: string
@@ -15,7 +14,6 @@ interface RoomClientProps {
 export function RoomClient({ roomId, userId, initialJoined }: RoomClientProps) {
   const [hasJoined, setHasJoined] = useState(initialJoined)
   const [loading, setLoading] = useState(false)
-  const { toast } = useToast()
   const router = useRouter()
 
   const handleJoinRoom = async () => {
@@ -31,19 +29,10 @@ export function RoomClient({ roomId, userId, initialJoined }: RoomClientProps) {
       }
 
       setHasJoined(true)
-      toast({
-        title: "Success!",
-        description: "You've joined the room successfully.",
-      })
-
       // Refresh the page to show updated player list
       router.refresh()
     } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to join room",
-        variant: "destructive",
-      })
+      console.error("Error joining room:", error instanceof Error ? error.message : "Failed to join room")
     } finally {
       setLoading(false)
     }

@@ -8,4 +8,4 @@ export default function Loading() {
       <Skeleton className="h-32 w-full mb-8" />
     </div>
   )
-} 
+}

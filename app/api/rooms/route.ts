@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { name, description, isPrivate, password, maxPlayers } = await request.json()
+    const { name, description, isPrivate, maxPlayers } = await request.json()
 
     let joinCode = generateJoinCode()
 
@@ -62,7 +62,6 @@ export async function POST(request: NextRequest) {
         name,
         description,
         isPrivate,
-        password: isPrivate ? password : null,
         joinCode,
         maxPlayers: Number.parseInt(maxPlayers),
         createdBy: user.id,

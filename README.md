@@ -1,6 +1,6 @@
 # Multiplayer AI Coding Arena 🏆
 
-A production-ready, real-time coding competition platform. Compete with friends or strangers in live AI-generated coding challenges, with instant feedback, real-time leaderboards, and a simple, human-friendly interface.
+A production-ready, real-time coding competition platform. Compete with friends or strangers in live AI-generated coding challenges, with instant feedback and a simple, human-friendly interface.
 
 ---
 
@@ -9,7 +9,6 @@ A production-ready, real-time coding competition platform. Compete with friends 
 - **Real-time Multiplayer Rooms**: Join, create, or enter rooms for live coding battles
 - **AI-Generated Problems**: Every game features a unique, automatically generated coding challenge (Google Gemini)
 - **Instant Feedback**: Submissions are evaluated by AI for correctness, efficiency, and style
-- **Live Leaderboards**: See your rank and points update in real time
 - **Game Timer**: Each game has a countdown; the first correct solution wins, or the game ends when time runs out
 - **Simple Points System**: Winner gets +5, all others get -5
 - **Minimalist UI**: No unnecessary badges, win rates, or AI points—just code, compete, and win
@@ -41,7 +40,7 @@ A production-ready, real-time coding competition platform. Compete with friends 
 4. **Coding Phase**: All players code in real time
 5. **Submit Solution**: First correct submission ends the game, or the timer runs out
 6. **Scoring**: Winner gets +5 points, all others get -5
-7. **Leaderboard Updates**: See your global rank instantly
+7. **Results**: See your global rank instantly on the leaderboard page
 
 ---
 

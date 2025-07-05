@@ -3,17 +3,15 @@ import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Users, Trophy } from "lucide-react"
 import Link from "next/link"
 import { RoomClient } from "./room-client"
 import { RoomRealtime } from "./room-realtime"
 import { StartGameButton } from "./start-game-button"
 import { CodeEditor } from "./code-editor"
-import { LiveLeaderboard } from "./live-leaderboard"
-import { SimpleNotifications } from "./simple-notifications"
 import { DeleteRoomButton } from "./delete-room-button"
 import { SmallGameTimer } from "./small-game-timer"
+import { LeaveRoomButton } from "./leave-room-button"
 
 interface Props {
   params: Promise<{
@@ -32,27 +30,11 @@ export default async function RoomPage({ params }: Props) {
   const room = await prisma.room.findUnique({
     where: { id },
     include: {
-      creator: {
-        select: {
-          id: true,
-          username: true,
-        },
-      },
-      games: {
-        orderBy: { startedAt: "desc" },
+      creator: { select: { id: true, username: true } },
+      participants: {
         include: {
-          participants: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  username: true,
-                },
-              },
-            },
-          },
+          user: { select: { id: true, username: true } },
         },
-        take: 1,
       },
     },
   })
@@ -73,27 +55,29 @@ export default async function RoomPage({ params }: Props) {
     )
   }
 
-  const latestGame = room.games[0]
-  const participants = latestGame?.participants || []
-  const isUserInRoom = participants.some((p) => p.user.id === user.id) || room.creator.id === user.id
-  const allPlayers = [room.creator, ...participants.map((p) => p.user)]
   const isHost = room.creator.id === user.id
-  const hasRealChallenge = latestGame && latestGame.challengeTitle !== "Waiting for challenge..."
+  const isUserInRoom = room.participants.some((p) => p.user.id === user.id) || isHost
+  const participantCount = room.participants.length
+  const allPlayers = [room.creator, ...room.participants.map((p) => p.user)]
+  const hasRealChallenge = room.challengeTitle && room.challengeTitle !== "Waiting for challenge..."
 
   // Check if user has submitted
   let userSubmission = null
-  if (latestGame && hasRealChallenge) {
+  if (hasRealChallenge) {
     userSubmission = await prisma.submission.findFirst({
       where: {
-        gameId: latestGame.id,
+        roomId: room.id,
         userId: user.id,
       },
     })
   }
 
   // Determine if the game is finished or in progress
-  const isGameFinished = latestGame && latestGame.status === "finished"
-  const isGameInProgress = latestGame && latestGame.status === "active"
+  const isGameFinished = room.status === "finished"
+  const isGameInProgress = room.status === "in_progress"
+
+  // Only allow starting a game if the room is in 'waiting' status
+  const canStartGame = room.status === "waiting"
 
   return (
     <RoomRealtime roomId={id} userId={user.id}>
@@ -110,31 +94,22 @@ export default async function RoomPage({ params }: Props) {
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                <DeleteRoomButton
-                  roomId={id}
-                  roomName={room.name}
-                  isHost={isHost}
-                />
+                {isHost && participantCount === 0 && (
+                  <DeleteRoomButton roomId={id} roomName={room.name} isCreator={isHost} currentPlayers={participantCount} />
+                )}
+                {isUserInRoom && !isHost && <LeaveRoomButton roomId={id} />}
               </div>
             </div>
           </div>
         </header>
 
         <main className="container mx-auto px-4 py-8">
-          {/* Simple notification system */}
-          <div className="mb-6">
-            <SimpleNotifications
-              roomId={id}
-              gameId={latestGame?.id}
-              currentStatus={room.status}
-              playerCount={allPlayers.length}
-              maxPlayers={room.maxPlayers}
+          {/* Game timer */}
+          {hasRealChallenge && isGameInProgress && room.startedAt && (
+            <SmallGameTimer
+              startedAt={typeof room.startedAt === 'string' ? room.startedAt : room.startedAt.toISOString()}
+              durationSeconds={room.durationSeconds ?? 0}
             />
-          </div>
-
-          {/* Add a SmallGameTimer component above the challenge area, only when hasRealChallenge is true and game is not finished */}
-          {hasRealChallenge && isGameInProgress && (
-            <SmallGameTimer startedAt={typeof latestGame.startedAt === 'string' ? latestGame.startedAt : latestGame.startedAt.toISOString()} durationSeconds={latestGame.durationSeconds} />
           )}
 
           <div className="grid lg:grid-cols-4 gap-8">
@@ -147,20 +122,20 @@ export default async function RoomPage({ params }: Props) {
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center space-x-2">
-                        <span>🎯 {latestGame.challengeTitle}</span>
-                        <span>{latestGame.difficulty}</span>
+                        <span>🎯 {room.challengeTitle}</span>
+                        <span>{room.difficulty}</span>
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="space-y-4">
                         <div>
                           <h4 className="font-medium mb-2">📝 Problem Description</h4>
-                          <p className="text-gray-700 whitespace-pre-wrap">{latestGame.challengeDescription}</p>
+                          <p className="text-gray-700 whitespace-pre-wrap">{room.challengeDescription}</p>
                         </div>
                         <div>
                           <h4 className="font-medium mb-2">💡 Examples</h4>
                           <div className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
-                            {JSON.parse(latestGame.challengeExamples).map((example: any, index: number) => (
+                            {JSON.parse(room.challengeExamples || '[]').map((example: any, index: number) => (
                               <div key={index} className="mb-3 last:mb-0">
                                 <div className="font-medium text-gray-800">Example {index + 1}:</div>
                                 <div className="mt-1">
@@ -186,23 +161,8 @@ export default async function RoomPage({ params }: Props) {
                   {/* Show code editor only if user is a participant and game is active */}
                   {isUserInRoom && isGameInProgress ? (
                     <CodeEditor
-                      roomId={id}
-                      gameId={latestGame.id}
+                      roomId={room.id}
                       userId={user.id}
-                      hasSubmitted={!!userSubmission}
-                      existingSubmission={
-                        userSubmission
-                          ? {
-                              code: userSubmission.code,
-                              language: userSubmission.language,
-                              isCorrect: userSubmission.isCorrect,
-                              aiFeedback: userSubmission.aiFeedback || "",
-                              score: userSubmission.score,
-                              timeComplexity: userSubmission.timeComplexity || "",
-                              spaceComplexity: userSubmission.spaceComplexity || "",
-                            }
-                          : undefined
-                      }
                     />
                   ) : isGameInProgress ? (
                     <Card>
@@ -211,11 +171,9 @@ export default async function RoomPage({ params }: Props) {
                       </CardContent>
                     </Card>
                   ) : null}
-                  {/* Show leaderboard/results for finished or in-progress games */}
-                  <LiveLeaderboard gameId={latestGame.id} />
                 </>
               ) :
-                isUserInRoom ? (
+                canStartGame && isUserInRoom ? (
                   <Card>
                     <CardContent className="text-center py-12">
                       <h3 className="text-lg font-medium text-gray-900 mb-2">🚀 Ready to Start!</h3>
@@ -233,6 +191,16 @@ export default async function RoomPage({ params }: Props) {
                       />
                     </CardContent>
                   </Card>
+                ) : !canStartGame ? (
+                  <Card>
+                    <CardContent className="text-center py-12">
+                      <h3 className="text-lg font-medium text-gray-900 mb-2">Room Finished</h3>
+                      <p className="text-gray-500 mb-6">This room has already been used for a game and cannot be used again.</p>
+                      <Link href="/rooms">
+                        <Button>Back to Rooms</Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
                 ) : (
                   <RoomClient roomId={id} userId={user.id} initialJoined={false} />
                 )
@@ -241,48 +209,25 @@ export default async function RoomPage({ params }: Props) {
 
             {/* Sidebar */}
             <div className="space-y-6">
-              {/* Live Leaderboard (only show during active game) */}
-              {hasRealChallenge && <LiveLeaderboard gameId={latestGame.id} />}
-
               {/* Players Panel */}
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center space-x-2">
                     <Users className="h-5 w-5" />
-                    <span>
-                      Players ({allPlayers.length}/{room.maxPlayers})
-                    </span>
+                    <span>Players ({allPlayers.length}/{room.maxPlayers})</span>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {allPlayers.map((player) => (
-                      <div key={player.id} className="flex items-center justify-between p-2 border rounded">
-                        <div className="flex items-center space-x-2">
-                          <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                            <span className="text-sm font-medium text-blue-600">
-                              {player.username.charAt(0).toUpperCase()}
-                            </span>
-                          </div>
-                          <span className="font-medium">{player.username}</span>
-                          {player.id === room.creator.id && (
-                            <span className="text-xs text-gray-500">Host</span>
-                          )}
-                          {player.id === user.id && (
-                            <span className="text-xs text-gray-500">You</span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-
-                    {Array.from({ length: room.maxPlayers - allPlayers.length }).map((_, index) => (
-                      <div key={`empty-${index}`} className="flex items-center p-2 border rounded border-dashed">
-                        <div className="flex items-center space-x-2 text-gray-400">
-                          <div className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center">
-                            <Users className="h-4 w-4" />
-                          </div>
-                          <span className="text-sm">Waiting for player...</span>
-                        </div>
+                      <div key={player.id} className="flex items-center space-x-2 p-2 border rounded">
+                        <span className="font-medium">{player.username}</span>
+                        {player.id === room.creator.id && (
+                          <span className="text-xs text-gray-500">(Host)</span>
+                        )}
+                        {player.id === user.id && (
+                          <span className="text-xs text-blue-500">(You)</span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -309,14 +254,6 @@ export default async function RoomPage({ params }: Props) {
                     <div className="flex justify-between">
                       <span className="text-gray-600">Max Players:</span>
                       <span>{room.maxPlayers}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Created:</span>
-                      <span>{new Date(room.createdAt).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Privacy:</span>
-                      <span>{room.isPrivate ? "Private" : "Public"}</span>
                     </div>
                   </div>
                 </CardContent>

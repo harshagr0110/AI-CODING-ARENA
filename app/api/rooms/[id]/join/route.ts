@@ -13,13 +13,25 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     const room = await prisma.room.findUnique({
       where: { id },
+      include: {
+        participants: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                username: true,
+              },
+            },
+          },
+        },
+      },
     })
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 })
     }
 
-    if (room.currentPlayers >= room.maxPlayers) {
+    if (room.participants.length >= room.maxPlayers) {
       return NextResponse.json({ error: "Room is full" }, { status: 400 })
     }
 
@@ -28,58 +40,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
 
     // Check if user is already in the room
-    const existingParticipant = await prisma.gameParticipant.findFirst({
-      where: {
-        userId: user.id,
-        game: {
-          roomId: id,
-          status: "active",
-        },
-      },
-    })
-
+    const existingParticipant = room.participants.find(p => p.user.id === user.id)
     if (existingParticipant) {
       return NextResponse.json({ message: "Already in room" })
     }
 
-    // Create or get active game for this room
-    let activeGame = await prisma.game.findFirst({
-      where: {
-        roomId: id,
-        status: "active",
-      },
-    })
-
-    if (!activeGame) {
-      // Create a new game session for this room
-      activeGame = await prisma.game.create({
-        data: {
-          id: crypto.randomUUID(),
-          roomId: id,
-          challengeTitle: "Waiting for challenge...",
-          challengeDescription: "Game will start soon",
-          challengeExamples: "[]",
-          status: "active",
-        },
-      })
-    }
-
     // Add user as participant
-    await prisma.gameParticipant.create({
+    await prisma.roomParticipant.create({
       data: {
-        id: crypto.randomUUID(),
-        gameId: activeGame.id,
+        roomId: id,
         userId: user.id,
-      },
-    })
-
-    // Update room player count
-    await prisma.room.update({
-      where: { id },
-      data: {
-        currentPlayers: {
-          increment: 1,
-        },
       },
     })
 

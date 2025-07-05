@@ -10,13 +10,10 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { useToast } from "@/hooks/use-toast"
 import { MainLayout } from "@/components/main-layout"
 
 export default function CreateRoomPage() {
   const router = useRouter()
-  const { toast } = useToast()
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -44,18 +41,11 @@ export default function CreateRoomPage() {
       }
 
       const room = await response.json()
-      toast({
-        title: "Room created successfully!",
-        description: "Redirecting to your new room...",
-      })
+      alert("Room created successfully! Redirecting to your new room...")
 
       router.push(`/rooms/${room.id}`)
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to create room. Please try again.",
-        variant: "destructive",
-      })
+      alert("Failed to create room. Please try again.")
     } finally {
       setLoading(false)
     }
@@ -102,19 +92,14 @@ export default function CreateRoomPage() {
 
                   <div className="space-y-2">
                     <Label htmlFor="maxPlayers">Maximum Players</Label>
-                    <Select
+                    <select
                       value={formData.maxPlayers}
-                      onValueChange={(value) => setFormData({ ...formData, maxPlayers: value })}
+                      onChange={(e) => setFormData({ ...formData, maxPlayers: e.target.value })}
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="2">2 Players</SelectItem>
-                        <SelectItem value="3">3 Players</SelectItem>
-                        <SelectItem value="4">4 Players</SelectItem>
-                      </SelectContent>
-                    </Select>
+                      <option value="2">2 Players</option>
+                      <option value="3">3 Players</option>
+                      <option value="4">4 Players</option>
+                    </select>
                   </div>
 
                   <div className="flex items-center space-x-2">

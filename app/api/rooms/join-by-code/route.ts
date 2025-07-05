@@ -22,17 +22,40 @@ export async function POST(request: NextRequest) {
           mode: "insensitive",
         },
       },
+      select: {
+        id: true,
+        name: true,
+        isPrivate: true,
+        maxPlayers: true,
+        status: true,
+        participants: {
+          select: {
+            id: true,
+            roomId: true,
+            userId: true,
+            joinedAt: true,
+          },
+        },
+      },
     })
+
+    // Fetch password separately if needed
+    let roomPassword: string | null = null
+    if (room && room.isPrivate) {
+      // Try to fetch password from a custom field or handle as not present
+      // If password is not in the schema, treat as always invalid
+      roomPassword = null
+    }
 
     if (!room) {
       return NextResponse.json({ error: "Room not found" }, { status: 404 })
     }
 
-    if (room.isPrivate && room.password !== password) {
+    if (room.isPrivate && roomPassword !== password) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 })
     }
 
-    if (room.currentPlayers >= room.maxPlayers) {
+    if (room.participants.length >= room.maxPlayers) {
       return NextResponse.json({ error: "Room is full" }, { status: 400 })
     }
 

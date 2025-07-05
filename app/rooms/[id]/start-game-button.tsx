@@ -3,9 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Play, Loader2, Users, Clock } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { Play, Loader2 } from "lucide-react"
 import { useSocket } from "@/hooks/use-socket"
 
 interface StartGameButtonProps {
@@ -19,24 +17,13 @@ interface StartGameButtonProps {
 export function StartGameButton({ roomId, roomName, isHost, playerCount, disabled }: StartGameButtonProps) {
   const [isStarting, setIsStarting] = useState(false)
   const [difficulty, setDifficulty] = useState('medium')
-  const [duration, setDuration] = useState(5 * 60); // default 5 minutes
+  const [duration, setDuration] = useState(300) // default 5 min
   const router = useRouter()
-  const { toast } = useToast()
   const { socket, isConnected } = useSocket()
 
-  const handleInitiateStart = () => {
+  const handleStartGame = async () => {
     if (!isHost || disabled || isStarting) return
 
-    toast({
-      title: "🎮 Preparing Game...",
-      description: "Get ready for the countdown!",
-      duration: 2000,
-    })
-
-    setIsStarting(true)
-  }
-
-  const handleCountdownComplete = async () => {
     setIsStarting(true)
 
     try {
@@ -52,45 +39,22 @@ export function StartGameButton({ roomId, roomName, isHost, playerCount, disable
         throw new Error("Failed to start game")
       }
 
-      const data = await response.json()
-
-      // Emit socket event immediately for better synchronization
+      // Emit socket event for real-time updates
       if (socket && isConnected) {
         socket.emit("game-started", {
           roomId,
-          gameId: data.game.id,
-          game: data.game
         })
-
-        // Add all participants to the game tracking
-        if (data.participants) {
-          data.participants.forEach((participant: any) => {
-            socket.emit("add-participant", {
-              gameId: data.game.id,
-              userId: participant.userId || participant.user.id
-            })
-          })
-        }
       }
 
-      toast({
-        title: "🚀 Game Started!",
-        description: `The ${difficulty} coding challenge has begun! Timer is now active.`,
-        duration: 3000,
-      })
+      alert("🚀 Game Started!")
 
-      // Refresh the page after a shorter delay for better UX
+      // Refresh the page
       setTimeout(() => {
         router.refresh()
       }, 500)
     } catch (error) {
-      console.error("❌ Error starting game:", error)
-      toast({
-        title: "Error",
-        description: "Failed to start the game. Please try again.",
-        variant: "destructive",
-        duration: 5000,
-      })
+      console.error("Error starting game:", error)
+      alert("Error starting the game. Please try again.")
     } finally {
       setIsStarting(false)
     }
@@ -99,65 +63,48 @@ export function StartGameButton({ roomId, roomName, isHost, playerCount, disable
   // Render button for host or waiting message for non-host
   if (!isHost) {
     return (
-      <div className="text-center space-y-4">
-        <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-          <h3 className="font-medium text-blue-800 mb-2">⏳ Waiting for Host</h3>
-          <p className="text-sm text-blue-600 mb-3">The host will start the game when everyone is ready.</p>
-          <div className="flex items-center justify-center space-x-2 text-sm text-blue-700">
-            <Users className="h-4 w-4" />
-            <span>{playerCount} players ready</span>
-          </div>
-        </div>
-        <Button variant="outline" onClick={() => router.refresh()} className="text-sm">
-          <Clock className="h-4 w-4 mr-2" />
-          Check for Updates
-        </Button>
+      <div className="text-center p-4 bg-blue-50 rounded-lg">
+        <h3 className="font-medium text-blue-800 mb-2">⏳ Waiting for Host</h3>
+        <p className="text-sm text-blue-600">{playerCount} players ready</p>
       </div>
     )
   }
 
-  // Host's "Ready to Start!" view
+  // Host's view
   return (
     <div className="text-center space-y-4">
-      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+      <div className="p-4 bg-green-50 rounded-lg">
         <h3 className="font-medium text-green-800 mb-2">🎯 Ready to Start!</h3>
-        <p className="text-sm text-green-600 mb-3">All players are here. Choose difficulty and begin the coding challenge!</p>
-        <div className="flex items-center justify-center space-x-2 text-sm text-green-700 mb-4">
-          <Users className="h-4 w-4" />
-          <span>{playerCount} players ready</span>
-        </div>
+        <p className="text-sm text-green-600 mb-4">{playerCount} players ready</p>
         
         <div className="flex items-center justify-center space-x-2 mb-4">
           <span className="text-sm text-green-700">Difficulty:</span>
-          <Select value={difficulty} onValueChange={setDifficulty}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="easy">Easy</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="hard">Hard</SelectItem>
-            </SelectContent>
-          </Select>
+          <select 
+            value={difficulty} 
+            onChange={(e) => setDifficulty(e.target.value)}
+            className="border rounded px-2 py-1"
+          >
+            <option value="easy">Easy</option>
+            <option value="medium">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
         </div>
-
         <div className="flex items-center justify-center space-x-2 mb-4">
           <span className="text-sm text-green-700">Duration:</span>
-          <Select value={duration.toString()} onValueChange={v => setDuration(Number(v))}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="300">5 min</SelectItem>
-              <SelectItem value="600">10 min</SelectItem>
-              <SelectItem value="900">15 min</SelectItem>
-            </SelectContent>
-          </Select>
+          <select
+            value={duration}
+            onChange={e => setDuration(Number(e.target.value))}
+            className="border rounded px-2 py-1"
+          >
+            <option value={300}>5 min</option>
+            <option value={600}>10 min</option>
+            <option value={900}>15 min</option>
+          </select>
         </div>
       </div>
 
       <Button
-        onClick={handleCountdownComplete}
+        onClick={handleStartGame}
         disabled={disabled || isStarting}
         size="lg"
         className="bg-green-600 hover:bg-green-700 text-white px-8 py-3"
@@ -167,14 +114,14 @@ export function StartGameButton({ roomId, roomName, isHost, playerCount, disable
             <Loader2 className="mr-2 h-5 w-5 animate-spin" />
             Starting Game...
           </>
-          ) : (
+        ) : (
           <>
             <Play className="mr-2 h-5 w-5" />
-            Start {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Game ({playerCount} players)
+            Start {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)} Game
           </>
         )}
       </Button>
-      {disabled && <p className="text-sm text-gray-500 mt-2">Need at least 2 players to start</p>}
+      {disabled && <p className="text-sm text-gray-500">Need at least 2 players to start</p>}
     </div>
   )
 }

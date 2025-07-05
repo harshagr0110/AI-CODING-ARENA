@@ -14,13 +14,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const room = await prisma.room.findUnique({
       where: { id },
       include: {
-        games: {
-          where: { status: "active" },
-          include: {
-            participants: true,
-          },
-          take: 1,
-        },
+        participants: true,
       },
     })
 
@@ -28,15 +22,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ error: "Room not found" }, { status: 404 })
     }
 
-    const activeGame = room.games[0]
-    const playerCount = activeGame ? activeGame.participants.length + 1 : 1 // +1 for room creator
+    const playerCount = room.participants.length + 1 // +1 for room creator
+    const hasActiveGame = room.status === "in_progress"
+    const gameStarted = hasActiveGame && room.challengeTitle !== "Waiting for challenge..."
 
     return NextResponse.json({
       status: room.status,
       playerCount,
       maxPlayers: room.maxPlayers,
-      hasActiveGame: !!activeGame,
-      gameStarted: activeGame && activeGame.challengeTitle !== "Waiting for challenge...",
+      hasActiveGame,
+      gameStarted,
       lastUpdated: new Date().toISOString(),
     })
   } catch (error) {

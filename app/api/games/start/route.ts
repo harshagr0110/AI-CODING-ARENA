@@ -16,23 +16,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
     }
 
-    console.log("Starting game for room:", roomId, "with difficulty:", difficulty)
-
     // Get room and verify user is the creator
     const room = await prisma.room.findUnique({
       where: { id: roomId },
       include: {
-        games: {
-          where: { status: "active" },
+        participants: {
           include: {
-            participants: {
-              include: {
-                user: {
-                  select: {
-                    id: true,
-                    username: true,
-                  },
-                },
+            user: {
+              select: {
+                id: true,
+                username: true,
               },
             },
           },
@@ -49,25 +42,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (room.status !== "waiting") {
-      return NextResponse.json({ error: "Room is not in waiting state" }, { status: 400 })
+      return NextResponse.json({ error: "Room is not available for a new game. It may already be finished or in progress." }, { status: 400 })
     }
 
-    const activeGame = room.games[0]
-    if (!activeGame) {
-      return NextResponse.json({ error: "No active game found" }, { status: 404 })
-    }
-
-    if (activeGame.participants.length < 1) {
+    if (room.participants.length < 1) {
       return NextResponse.json({ error: "Need at least 2 players to start" }, { status: 400 })
     }
-
-    console.log("Generating coding challenge...")
 
     // Generate AI challenge with fallback
     let challenge
     try {
       challenge = await generateCodingChallenge(difficulty)
-      console.log("Challenge generated:", challenge.title)
     } catch (aiError) {
       console.error("AI challenge generation failed:", aiError)
       // Fallback challenge
@@ -90,11 +75,9 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    console.log("Updating game with challenge...")
-
-    // Update the game with the actual challenge
-    const updatedGame = await prisma.game.update({
-      where: { id: activeGame.id },
+    // Update the room with the game data
+    const updatedRoom = await prisma.room.update({
+      where: { id: roomId },
       data: {
         challengeTitle: challenge.title,
         challengeDescription: challenge.description,
@@ -102,31 +85,14 @@ export async function POST(request: NextRequest) {
         difficulty: difficulty,
         startedAt: new Date(),
         durationSeconds: durationSeconds || 300,
+        status: "in_progress",
       },
     })
-
-    console.log("Updating room status...")
-
-    // Update room status
-    await prisma.room.update({
-      where: { id: roomId },
-      data: { status: "in_progress" },
-    })
-
-    console.log("Game started successfully")
 
     return NextResponse.json({
       message: "Game started successfully",
-      game: updatedGame,
-      participants: activeGame.participants,
-      socketEvent: {
-        room: roomId,
-        event: "game-started",
-        data: {
-          gameId: updatedGame.id,
-          game: updatedGame,
-        },
-      },
+      game: updatedRoom,
+      participants: room.participants,
     })
   } catch (error: unknown) {
     console.error("Error starting game:", error)

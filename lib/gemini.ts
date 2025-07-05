@@ -27,34 +27,13 @@ interface CodingChallenge {
   }>;
 }
 
-// Track generated challenges to avoid duplicates
-const generatedChallenges = new Set<string>();
-
 export async function generateCodingChallenge(difficulty: string = "medium"): Promise<CodingChallenge> {
   if (!process.env.GEMINI_API_KEY) {
-    console.error("GEMINI_API_KEY is missing");
-    // Return a fallback challenge
-    return {
-      title: "Two Sum Problem",
-      description: "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
-      examples: [
-        {
-          input: "nums = [2,7,11,15], target = 9",
-          output: "[0,1]",
-          explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-        },
-        {
-          input: "nums = [3,2,4], target = 6",
-          output: "[1,2]",
-          explanation: "Because nums[1] + nums[2] == 6, we return [1, 2].",
-        },
-      ],
-    };
+    throw new Error("GEMINI_API_KEY is missing");
   }
 
   try {
     const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
-
     const prompt = `
     Generate a unique coding challenge for a multiplayer coding arena.
     
@@ -101,72 +80,27 @@ export async function generateCodingChallenge(difficulty: string = "medium"): Pr
 
     console.log("Gemini raw response for challenge:", text);
 
-    try {
-      // Clean the response text by removing markdown if Gemini adds it
-      const cleanText = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-      const challenge: CodingChallenge = JSON.parse(cleanText);
+    // Clean the response text by removing markdown if Gemini adds it
+    const cleanText = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+    const challenge: CodingChallenge = JSON.parse(cleanText);
 
-      // Basic validation
-      if (
-        typeof challenge.title !== 'string' ||
-        typeof challenge.description !== 'string' ||
-        !Array.isArray(challenge.examples) ||
-        challenge.examples.length === 0
-      ) {
-        throw new Error("Parsed challenge object has an invalid structure.");
-      }
-
-      // Check if this challenge has been generated before
-      const challengeKey = challenge.title.toLowerCase().replace(/[^a-z0-9]/g, '');
-      if (generatedChallenges.has(challengeKey)) {
-        console.log("Duplicate challenge detected, generating new one...");
-        return generateCodingChallenge(difficulty); // Recursive call to generate new challenge
-      }
-      
-      generatedChallenges.add(challengeKey);
-      return challenge;
-
-    } catch (parseError) {
-      console.error("Failed to parse Gemini challenge response:", parseError);
-      console.error("Raw response that caused parse error:", text);
-      // Return a fallback challenge if parsing fails
-      return {
-        title: "Array Rotation Challenge",
-        description: "Given an array of integers and a number k, rotate the array to the right by k positions.\n\nExample: If array is [1,2,3,4,5] and k=2, the result should be [4,5,1,2,3].\n\nNote: k can be larger than the array length.",
-        examples: [
-          {
-            input: "nums = [1,2,3,4,5], k = 2",
-            output: "[4,5,1,2,3]",
-            explanation: "Rotate right by 2 positions: [1,2,3,4,5] → [4,5,1,2,3]",
-          },
-          {
-            input: "nums = [1,2,3], k = 4",
-            output: "[3,1,2]",
-            explanation: "k=4 is equivalent to k=1 since 4 % 3 = 1",
-          },
-        ],
-      };
+    // Basic validation
+    if (
+      typeof challenge.title !== 'string' ||
+      typeof challenge.description !== 'string' ||
+      !Array.isArray(challenge.examples) ||
+      challenge.examples.length === 0
+    ) {
+      throw new Error("Parsed challenge object has an invalid structure.");
     }
+
+    return challenge;
 
   } catch (error) {
     console.error("Gemini API error during challenge generation:", error);
-    // Return a fallback challenge if API call fails
-    return {
-      title: "Palindrome Checker",
-      description: "Write a function that checks if a given string is a palindrome.\n\nA palindrome reads the same forwards and backwards, ignoring case and non-alphanumeric characters.\n\nReturn true if it's a palindrome, false otherwise.",
-      examples: [
-        {
-          input: '"A man, a plan, a canal: Panama"',
-          output: "true",
-          explanation: "After removing non-alphanumeric chars: 'amanaplanacanalpanama' is a palindrome",
-        },
-        {
-          input: '"race a car"',
-          output: "false",
-          explanation: "After cleaning: 'raceacar' is not a palindrome",
-        },
-      ],
-    };
+    throw new Error(
+      typeof error === 'string' ? error : (error instanceof Error ? error.message : 'Unknown error')
+    );
   }
 }
 

@@ -15,27 +15,26 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
 
 interface DeleteRoomButtonProps {
   roomId: string
   roomName: string
-  isHost: boolean
+  isCreator: boolean
+  currentPlayers: number
 }
 
-export function DeleteRoomButton({ roomId, roomName, isHost }: DeleteRoomButtonProps) {
+export function DeleteRoomButton({ roomId, roomName, isCreator, currentPlayers }: DeleteRoomButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
-  const { toast } = useToast()
 
-  console.log("DeleteRoomButton render:", { roomId, roomName, isHost })
+  console.log("DeleteRoomButton render:", { roomId, roomName, isCreator, currentPlayers })
 
-  if (!isHost) {
-    console.log("Not host, not rendering delete button")
+  if (!isCreator || currentPlayers > 0) {
+    console.log("Not creator or players in room, not rendering delete button")
     return null
   }
 
-  console.log("Rendering delete button for host")
+  console.log("Rendering delete button for creator")
 
   const handleDelete = async () => {
     setIsDeleting(true)
@@ -53,19 +52,12 @@ export function DeleteRoomButton({ roomId, roomName, isHost }: DeleteRoomButtonP
         throw new Error(error.error || "Failed to delete room")
       }
 
-      toast({
-        title: "Room deleted",
-        description: `"${roomName}" has been deleted successfully.`,
-      })
+      window.alert("Room deleted")
 
       router.push("/rooms")
     } catch (error) {
       console.error("Error deleting room:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete room",
-        variant: "destructive",
-      })
+      window.alert("Error: " + (error instanceof Error ? error.message : "Failed to delete room"))
     } finally {
       setIsDeleting(false)
     }
@@ -92,7 +84,9 @@ export function DeleteRoomButton({ roomId, roomName, isHost }: DeleteRoomButtonP
         <AlertDialogHeader>
           <AlertDialogTitle>Delete Room</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete "{roomName}"? This action cannot be undone and will permanently remove:
+            <span>
+              Are you sure you want to delete "{roomName}"? This action cannot be undone and will permanently remove:
+            </span>
             <ul className="list-disc list-inside mt-2 space-y-1">
               <li>The room and all its data</li>
               <li>All game history and submissions</li>

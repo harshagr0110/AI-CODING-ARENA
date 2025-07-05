@@ -15,8 +15,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Trash2 } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
-import { useSocket } from "@/hooks/use-socket"
 
 interface DeleteRoomCardButtonProps {
   roomId: string
@@ -27,8 +25,6 @@ interface DeleteRoomCardButtonProps {
 export function DeleteRoomCardButton({ roomId, roomName, isCreator }: DeleteRoomCardButtonProps) {
   const [isDeleting, setIsDeleting] = useState(false)
   const router = useRouter()
-  const { toast } = useToast()
-  const socket = useSocket()
 
   if (!isCreator) {
     return null
@@ -37,33 +33,26 @@ export function DeleteRoomCardButton({ roomId, roomName, isCreator }: DeleteRoom
   const handleDelete = async () => {
     setIsDeleting(true)
     try {
+      // Fetch participant count for the room
+      const res = await fetch(`/api/rooms/${roomId}/participants-count`)
+      if (!res.ok) throw new Error("Failed to fetch participant count")
+      const data = await res.json()
+      if (data.count > 0) {
+        window.alert("You cannot delete a room while users are inside. Please wait until everyone leaves.")
+        setIsDeleting(false)
+        return
+      }
       const response = await fetch(`/api/rooms/${roomId}`, {
         method: "DELETE",
       })
-
       if (!response.ok) {
         const error = await response.json()
         throw new Error(error.error || "Failed to delete room")
       }
-
-      // Emit socket event to notify other users
-      if (socket?.socket) {
-        socket.socket.emit("room-deleted", { roomId, roomName })
-      }
-
-      toast({
-        title: "Room deleted",
-        description: `"${roomName}" has been deleted successfully.`,
-      })
-
       router.refresh()
     } catch (error) {
       console.error("Error deleting room:", error)
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to delete room",
-        variant: "destructive",
-      })
+      window.alert("Error deleting room. Please try again.")
     } finally {
       setIsDeleting(false)
     }
