@@ -10,7 +10,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const { roomId, difficulty = "medium", durationSeconds } = await request.json()
+    const { roomId, difficulty = "medium", durationSeconds, mode = "normal" } = await request.json()
 
     if (!roomId) {
       return NextResponse.json({ error: "Room ID is required" }, { status: 400 })
@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
         startedAt: new Date(),
         durationSeconds: durationSeconds || 300,
         status: "in_progress",
+        mode: mode,
       },
     })
 

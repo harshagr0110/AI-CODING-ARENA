@@ -18,6 +18,7 @@ export function StartGameButton({ roomId, roomName, isHost, playerCount, disable
   const [isStarting, setIsStarting] = useState(false)
   const [difficulty, setDifficulty] = useState('medium')
   const [duration, setDuration] = useState(300) // default 5 min
+  const [mode, setMode] = useState('normal')
   const router = useRouter()
   const { socket, isConnected } = useSocket()
 
@@ -32,7 +33,7 @@ export function StartGameButton({ roomId, roomName, isHost, playerCount, disable
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ roomId, difficulty, durationSeconds: duration }),
+        body: JSON.stringify({ roomId, difficulty, durationSeconds: duration, mode }),
       })
 
       if (!response.ok) {
@@ -101,6 +102,20 @@ export function StartGameButton({ roomId, roomName, isHost, playerCount, disable
             <option value={900}>15 min</option>
           </select>
         </div>
+        {isHost && (
+          <div className="mb-4">
+            <label className="block mb-1 font-medium">Game Mode</label>
+            <select
+              className="border rounded px-2 py-1 w-full"
+              value={mode}
+              onChange={e => setMode(e.target.value)}
+            >
+              <option value="normal">Normal</option>
+              <option value="codegolf">Code Golf (Least Characters)</option>
+              <option value="contwrite">Continuous Writing</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <Button

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Trophy, Medal, Award, Clock, Code, TrendingUp } from "lucide-react"
 import Link from "next/link"
+import { RematchButton } from "@/components/rematch-button"
 
 interface Props {
   params: Promise<{
@@ -36,13 +37,10 @@ export default async function GameResultsPage({ params }: Props) {
       name: true,
       difficulty: true,
       maxPlayers: true,
-      creator: { select: { username: true } },
-      winner: { select: { username: true } },
-      participants: {
-        select: {
-          user: { select: { username: true, id: true } },
-        },
-      },
+      mode: true,
+      creator: { select: { username: true, id: true } },
+      winner: { select: { username: true, id: true } },
+      participants: { select: { user: { select: { username: true, id: true } } } },
       submissions: {
         select: {
           id: true,
@@ -52,6 +50,8 @@ export default async function GameResultsPage({ params }: Props) {
           language: true,
           timeComplexity: true,
           submittedAt: true,
+          code: true,
+          aiFeedback: true,
           user: { select: { username: true } },
         },
         orderBy: { score: "desc" },
@@ -86,6 +86,21 @@ export default async function GameResultsPage({ params }: Props) {
     .filter((s) => s.isCorrect)
     .sort((a, b) => b.score - a.score || new Date(a.submittedAt).getTime() - new Date(b.submittedAt).getTime())
     .map((entry, index) => ({ ...entry, rank: index + 1 }))
+
+  // For Code Golf, winner is shortest correct code
+  let codeGolfWinnerId: string | null = null
+  let codeGolfMinLen = Infinity
+  if (room.mode === 'codegolf') {
+    const correctSubs = room.submissions.filter((s: any) => s.isCorrect)
+    for (const sub of correctSubs) {
+      if (sub.code.length < codeGolfMinLen) {
+        codeGolfMinLen = sub.code.length
+        codeGolfWinnerId = sub.userId
+      }
+    }
+  }
+  // For Continuous Writing, show disqualified players
+  const disqualifiedIds = room.submissions.filter((s: any) => s.aiFeedback === 'disqualified').map((s: any) => s.userId)
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -189,6 +204,12 @@ export default async function GameResultsPage({ params }: Props) {
               </CardTitle>
             </CardHeader>
             <CardContent>
+              {room.mode === 'contwrite' && disqualifiedIds.length > 0 && (
+                <div className="mb-2 text-red-600 text-sm">Disqualified: {disqualifiedIds.join(', ')}</div>
+              )}
+              {room.mode === 'codegolf' && codeGolfWinnerId && (
+                <div className="mb-2 text-green-700 text-sm">🏆 Code Golf Winner: {room.submissions.find((s: any) => s.userId === codeGolfWinnerId)?.user.username} ({codeGolfMinLen} chars)</div>
+              )}
               {leaderboard.length === 0 ? (
                 <p className="text-gray-500 text-center py-4">No correct submissions</p>
               ) : (
@@ -214,7 +235,9 @@ export default async function GameResultsPage({ params }: Props) {
                           )}
                         </div>
                       </div>
-                      <span className="text-sm font-medium">{entry.score}</span>
+                      <span className="text-sm font-medium">
+                        {index === 0 ? "+5" : "-5"} pts
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -230,6 +253,10 @@ export default async function GameResultsPage({ params }: Props) {
           <Link href="/dashboard">
             <Button>Back to Dashboard</Button>
           </Link>
+          {/* Rematch button for host only */}
+          {room.creator.username === user.username && (
+            <RematchButton roomId={room.id} />
+          )}
         </div>
       </main>
     </div>

@@ -17,7 +17,7 @@ export default async function RoomsPage() {
   // Fetch latest 5 active rooms (anyone's)
   const activeRooms = await prisma.room.findMany({
     where: { 
-      status: { in: ["waiting", "in_progress"] },
+      status: 'waiting',
       isPrivate: false 
     },
     include: {

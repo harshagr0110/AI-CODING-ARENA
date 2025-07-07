@@ -25,10 +25,19 @@ export function RoomRealtime({ roomId, userId, children }: RoomRealtimeProps) {
       })
 
       socket.on("game-ended", (data: any) => {
-        router.push(`/rooms/${data.roomId}`)
+        // Redirect to results page for this game/room
+        if (data && data.gameId) {
+          router.push(`/games/${data.gameId}/results`)
+        } else {
+          router.push(`/rooms/${roomId}`)
+        }
       })
 
       socket.on("submission-update", () => {
+        router.refresh()
+      })
+
+      socket.on("player-joined", () => {
         router.refresh()
       })
 

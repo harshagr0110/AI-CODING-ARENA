@@ -25,6 +25,7 @@ interface CodingChallenge {
     output: string;
     explanation?: string;
   }>;
+  recommendedTimeComplexity: string;
 }
 
 export async function generateCodingChallenge(difficulty: string = "medium"): Promise<CodingChallenge> {
@@ -56,6 +57,7 @@ export async function generateCodingChallenge(difficulty: string = "medium"): Pr
     - For 'easy', keep it very simple and beginner-friendly
     - For 'medium', make it moderately challenging
     - For 'hard', make it truly challenging
+    - **Also, for this problem, specify the recommended time complexity required for an optimal solution (e.g., O(N), O(N log N), O(1)).**
     
     Respond ONLY with a valid JSON object following this structure:
     {
@@ -67,7 +69,8 @@ export async function generateCodingChallenge(difficulty: string = "medium"): Pr
           "output": "string", // Expected output
           "explanation": "string" // Brief explanation (optional)
         }
-      ]
+      ],
+      "recommendedTimeComplexity": "string" // e.g., "O(N)", "O(N log N)", "O(1)"
     }
     
     Make sure the challenge is unique and hasn't been used before. Be creative!
@@ -89,7 +92,8 @@ export async function generateCodingChallenge(difficulty: string = "medium"): Pr
       typeof challenge.title !== 'string' ||
       typeof challenge.description !== 'string' ||
       !Array.isArray(challenge.examples) ||
-      challenge.examples.length === 0
+      challenge.examples.length === 0 ||
+      typeof challenge.recommendedTimeComplexity !== 'string'
     ) {
       throw new Error("Parsed challenge object has an invalid structure.");
     }
@@ -143,23 +147,24 @@ export async function evaluateCode(code: string, challenge: any): Promise<CodeEv
     Description: ${challenge.description}
     Examples:
     ${JSON.stringify(challenge.examples, null, 2)}
+    Recommended Time Complexity: ${challenge.recommendedTimeComplexity}
     
     ## Submitted Code:
     \`\`\`
     ${code}
     \`\`\`
     
-    Respond ONLY with a valid JSON object following this structure. Be VERY generous with scoring - if the logic is correct, give high scores.
+    Respond ONLY with a valid JSON object following this structure. Be VERY generous with scoring - if the logic is correct, give high scores. If the code's time complexity is higher (worse) than the recommended time complexity, mark isCorrect as false and explain why in feedback.
     
     {
-      "isCorrect": boolean, // true if the code logic correctly solves the problem, false only if fundamentally wrong
-      "feedback": "string", // Constructive feedback on the code, even if correct. Max 3 sentences.
+      "isCorrect": boolean, // true if the code logic correctly solves the problem AND meets or beats the recommended time complexity, false otherwise
+      "feedback": "string", // Constructive feedback on the code, even if correct. Max 3 sentences. If time complexity is too high, explain that.
       "timeComplexity": "string", // e.g., "O(N)", "O(N log N)", "O(1)"
       "spaceComplexity": "string", // e.g., "O(N)", "O(log N)", "O(1)"
-      "score": number // 0-100, be generous: 80-100 for correct logic, 60-79 for mostly correct, 40-59 for partially correct
+      "score": number // 0-100, be generous: 80-100 for correct logic and optimal time, 60-79 for mostly correct, 40-59 for partially correct
     }
     
-    Remember: This is a competitive coding environment, not a production code review. Reward problem-solving ability over exact implementation details. If the solution would work, mark it as correct.
+    Remember: This is a competitive coding environment, not a production code review. Reward problem-solving ability over exact implementation details. If the solution would work and meets the time complexity requirement, mark it as correct.
     `;
 
     console.log("Calling Gemini API for code evaluation...");

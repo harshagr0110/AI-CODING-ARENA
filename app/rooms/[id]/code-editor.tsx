@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -20,8 +20,67 @@ export function CodeEditor({ roomId, userId }: CodeEditorProps) {
   const [language, setLanguage] = useState("javascript")
   const [loading, setLoading] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [disqualified, setDisqualified] = useState(false)
+  const [mode, setMode] = useState('normal')
+  const lastLengthRef = useRef(0)
+  const timerRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
   const { socket, isConnected } = useSocket()
+
+  useEffect(() => {
+    // Fetch mode from backend (room info)
+    fetch(`/api/rooms/${roomId}`)
+      .then(res => res.json())
+      .then(data => setMode(data.mode || 'normal'))
+  }, [roomId])
+
+  useEffect(() => {
+    if (mode !== 'contwrite' || !isConnected || submitted) return
+    let started = false
+    let interval: NodeJS.Timeout | null = null
+    const startContinuousCheck = () => {
+      started = true
+      lastLengthRef.current = code.length
+      interval = setInterval(() => {
+        if (code.length > lastLengthRef.current) {
+          lastLengthRef.current = code.length
+          // Notify backend of progress (optional)
+        } else {
+          setDisqualified(true)
+          if (socket) socket.emit('disqualified', { roomId, userId })
+          // Submit a disqualified submission to the backend
+          fetch('/api/submissions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              roomId,
+              code: code.trim(),
+              language,
+              aiFeedback: 'disqualified',
+              isCorrect: false
+            })
+          })
+          if (interval) clearInterval(interval)
+        }
+      }, 10000)
+    }
+    // Start after 30 seconds
+    timerRef.current = setTimeout(startContinuousCheck, 30000)
+    return () => {
+      if (timerRef.current) clearTimeout(timerRef.current)
+      if (interval) clearInterval(interval)
+    }
+  }, [mode, isConnected, code.length, submitted, socket, roomId, userId, code, language])
+
+  useEffect(() => {
+    if (!socket) return
+    socket.on('disqualified', (data: any) => {
+      if (data.userId === userId) setDisqualified(true)
+    })
+    return () => {
+      socket.off('disqualified')
+    }
+  }, [socket, userId])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -74,6 +133,17 @@ export function CodeEditor({ roomId, userId }: CodeEditorProps) {
     } finally {
       setLoading(false)
     }
+  }
+
+  if (disqualified) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <h3 className="text-lg font-medium text-red-600 mb-2">❌ Disqualified!</h3>
+          <p className="text-gray-600">You stopped typing for too long in Continuous Writing mode. You cannot submit or edit code anymore.</p>
+        </CardContent>
+      </Card>
+    )
   }
 
   if (submitted) {
@@ -129,6 +199,10 @@ export function CodeEditor({ roomId, userId }: CodeEditorProps) {
             )}
           </Button>
         </form>
+        {/* Show warning for Continuous Writing mode */}
+        {mode === 'contwrite' && !submitted && (
+          <div className="mb-2 text-yellow-700 text-sm">⚠️ Keep typing! If your code length doesn't increase every 10 seconds after 1 minute, you'll be disqualified.</div>
+        )}
       </CardContent>
     </Card>
   )

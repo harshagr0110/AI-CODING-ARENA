@@ -2,13 +2,16 @@ import { type NextRequest, NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { evaluateCode } from "@/lib/gemini"
+import io from 'socket.io-client'
+
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_IO_URL || 'http://localhost:3001')
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const { roomId, code, language = "cpp" } = await request.json()
+    const { roomId, code, language = "cpp", aiFeedback, isCorrect } = await request.json()
     if (!roomId || !code) return NextResponse.json({ error: "Room ID and code are required" }, { status: 400 })
 
     const room = await prisma.room.findUnique({ where: { id: roomId } })
@@ -25,13 +28,24 @@ export async function POST(request: NextRequest) {
       examples: room.challengeExamples ? JSON.parse(room.challengeExamples) : [],
     }
 
-    let evaluation = await evaluateCode(code, challenge).catch(() => ({
-      isCorrect: false,
-      feedback: "Evaluation failed. Please try again.",
-      score: 0,
-      timeComplexity: "Unknown",
-      spaceComplexity: "Unknown",
-    }))
+    let evaluation
+    if (aiFeedback === 'disqualified') {
+      evaluation = {
+        isCorrect: false,
+        feedback: 'disqualified',
+        score: 0,
+        timeComplexity: 'N/A',
+        spaceComplexity: 'N/A',
+      }
+    } else {
+      evaluation = await evaluateCode(code, challenge).catch(() => ({
+        isCorrect: false,
+        feedback: "Evaluation failed. Please try again.",
+        score: 0,
+        timeComplexity: "Unknown",
+        spaceComplexity: "Unknown",
+      }))
+    }
 
     const submission = await prisma.submission.create({
       data: {
@@ -48,19 +62,71 @@ export async function POST(request: NextRequest) {
       },
     })
 
-    if (evaluation.isCorrect) {
-      await prisma.room.update({
-        where: { id: roomId },
-        data: { winnerId: user.id, status: "finished", endedAt: new Date() },
-      })
-      await prisma.user.update({
-        where: { id: user.id },
-        data: {
-          gamesPlayed: { increment: 1 },
-          gamesWon: { increment: 1 },
-          totalScore: { increment: evaluation.score },
-        },
-      })
+    // Get the room with mode
+    const roomData = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: {
+        participants: true,
+      },
+    })
+    let allUserIds: string[] = []
+    let mode = 'normal'
+    if (roomData) {
+      allUserIds = [roomData.createdBy, ...roomData.participants.map((p: any) => p.userId)]
+      mode = roomData.mode || 'normal'
+    }
+    // Count submissions in this room
+    const submissionCount = await prisma.submission.count({ where: { roomId } })
+    if (mode === 'normal') {
+      if (submissionCount === allUserIds.length) {
+        await prisma.room.update({
+          where: { id: roomId },
+          data: { status: "finished", endedAt: new Date() },
+        })
+        socket.emit('game-ended', { roomId, gameId: roomId })
+      } else {
+        socket.emit('submission-update', {
+          newSubmission: { userId: user.id, result: evaluation, timestamp: new Date() },
+        })
+      }
+    } else if (mode === 'codegolf') {
+      // Code Golf: winner is shortest correct code
+      if (submissionCount === allUserIds.length) {
+        // Find the shortest correct submission
+        const correctSubs = await prisma.submission.findMany({
+          where: { roomId, isCorrect: true },
+        })
+        let winnerId = null
+        let minLen = Infinity
+        for (const sub of correctSubs) {
+          if (sub.code.length < minLen) {
+            minLen = sub.code.length
+            winnerId = sub.userId
+          }
+        }
+        await prisma.room.update({
+          where: { id: roomId },
+          data: { status: "finished", endedAt: new Date(), winnerId },
+        })
+        socket.emit('game-ended', { roomId, gameId: roomId })
+      } else {
+        socket.emit('submission-update', {
+          newSubmission: { userId: user.id, result: evaluation, timestamp: new Date() },
+        })
+      }
+    } else if (mode === 'contwrite') {
+      // Continuous Writing: logic to be implemented in real-time handler
+      if (submissionCount === allUserIds.length) {
+        await prisma.room.update({
+          where: { id: roomId },
+          data: { status: "finished", endedAt: new Date() },
+        })
+        socket.emit('game-ended', { roomId, gameId: roomId })
+      } else {
+        socket.emit('submission-update', {
+          newSubmission: { userId: user.id, result: evaluation, timestamp: new Date() },
+        })
+      }
     }
 
     return NextResponse.json({

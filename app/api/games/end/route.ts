@@ -37,6 +37,26 @@ export async function POST(request: NextRequest) {
       },
     })
 
+    // Deduct 5 points from all participants except the winner
+    const roomWithParticipants = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: { participants: true, winner: true, creator: true },
+    })
+    if (roomWithParticipants) {
+      const winnerId = roomWithParticipants.winner?.id
+      const allUserIds = [roomWithParticipants.creator.id, ...roomWithParticipants.participants.map(p => p.userId)]
+      const losers = allUserIds.filter(id => id !== winnerId)
+      await Promise.all(losers.map(userId =>
+        prisma.user.update({
+          where: { id: userId },
+          data: {
+            totalScore: { decrement: 5 },
+            gamesPlayed: { increment: 1 },
+          },
+        })
+      ))
+    }
+
     return NextResponse.json({ message: "Game ended successfully" })
   } catch (error) {
     console.error("Error ending game:", error)

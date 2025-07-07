@@ -79,6 +79,26 @@ export default async function RoomPage({ params }: Props) {
   // Only allow starting a game if the room is in 'waiting' status
   const canStartGame = room.status === "waiting"
 
+  // After checking if the game is finished
+  if (isGameFinished) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <Card>
+          <CardContent className="text-center py-12">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Game Finished</h3>
+            <p className="text-gray-500 mb-4">The game in this room has ended.</p>
+            <Link href={`/games/${id}/results`}>
+              <Button>View Results</Button>
+            </Link>
+            <Link href="/rooms">
+              <Button variant="outline">Back to Rooms</Button>
+            </Link>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   return (
     <RoomRealtime roomId={id} userId={user.id}>
       <div className="min-h-screen bg-gray-50">
@@ -109,6 +129,8 @@ export default async function RoomPage({ params }: Props) {
             <SmallGameTimer
               startedAt={room.startedAt instanceof Date ? room.startedAt.toISOString() : room.startedAt}
               durationSeconds={room.durationSeconds ?? 0}
+              roomId={room.id}
+              isHost={isHost}
             />
           )}
 
