@@ -1,11 +1,16 @@
 "use client"
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 
-export function RematchButton({ roomId }: { roomId: string }) {
+export function RematchButton({ roomId, isHost, roomStatus }: { roomId: string, isHost: boolean, roomStatus: string }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [canRejoin, setCanRejoin] = useState(roomStatus === 'waiting');
+
+  useEffect(() => {
+    setCanRejoin(roomStatus === 'waiting');
+  }, [roomStatus]);
 
   const handleRematch = async () => {
     setLoading(true);
@@ -20,9 +25,23 @@ export function RematchButton({ roomId }: { roomId: string }) {
     }
   };
 
-  return (
-    <Button onClick={handleRematch} disabled={loading} variant="default">
-      {loading ? "Rematching..." : "Rematch with Same Group"}
-    </Button>
-  );
+  const handleRejoin = () => {
+    router.push(`/rooms/${roomId}`);
+  };
+
+  if (isHost) {
+    return (
+      <Button onClick={handleRematch} disabled={loading} variant="default">
+        {loading ? "Rematching..." : "Start Rematch"}
+      </Button>
+    );
+  }
+  if (canRejoin) {
+    return (
+      <Button onClick={handleRejoin} variant="default">
+        Rejoin Rematch
+      </Button>
+    );
+  }
+  return null;
 } 

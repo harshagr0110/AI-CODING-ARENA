@@ -115,8 +115,11 @@ export async function POST(request: NextRequest) {
         })
       }
     } else if (mode === 'contwrite') {
-      // Continuous Writing: logic to be implemented in real-time handler
-      if (submissionCount === allUserIds.length) {
+      // Continuous Writing: end game if all are disqualified or wrong, or if any is correct
+      const allSubs = await prisma.submission.findMany({ where: { roomId } })
+      const allDisqualifiedOrWrong = allSubs.length === allUserIds.length && allSubs.every(sub => !sub.isCorrect)
+      const anyCorrect = allSubs.some(sub => sub.isCorrect)
+      if (allDisqualifiedOrWrong || anyCorrect) {
         await prisma.room.update({
           where: { id: roomId },
           data: { status: "finished", endedAt: new Date() },

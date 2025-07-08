@@ -27,27 +27,26 @@ export async function POST(request: NextRequest, { params }: { params: { roomId:
     if (room.creator.id !== user.id) {
       return NextResponse.json({ error: "Only the host can start a rematch" }, { status: 403 })
     }
-    // Generate a new challenge
-    const challenge = await generateCodingChallenge(room.difficulty || "medium")
-    // Reset the room for a new game
+    // Reset the room for a new game (status: waiting, clear challenge, winner, etc.)
     await prisma.room.update({
       where: { id: roomId },
       data: {
-        challengeTitle: challenge.title,
-        challengeDescription: challenge.description,
-        challengeExamples: JSON.stringify(challenge.examples),
+        challengeTitle: null,
+        challengeDescription: null,
+        challengeExamples: null,
         difficulty: room.difficulty,
-        startedAt: new Date(),
+        startedAt: null,
         endedAt: null,
-        status: "in_progress",
+        status: "waiting",
         winnerId: null,
         durationSeconds: room.durationSeconds,
+        recommendedTimeComplexity: null,
       },
     })
     // Delete old submissions
     await prisma.submission.deleteMany({ where: { roomId } })
-    // Notify all players via socket
-    socket.emit("game-started", { roomId })
+    // Notify all players via socket (optional: emit 'rematch-waiting')
+    socket.emit("rematch-waiting", { roomId })
     return NextResponse.redirect(`/rooms/${roomId}`)
   } catch (error) {
     return NextResponse.json({ error: "Internal server error" }, { status: 500 })

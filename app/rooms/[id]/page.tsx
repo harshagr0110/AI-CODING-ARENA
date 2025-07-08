@@ -12,6 +12,7 @@ import { CodeEditor } from "./code-editor"
 import { DeleteRoomButton } from "./delete-room-button"
 import { SmallGameTimer } from "./small-game-timer"
 import { LeaveRoomButton } from "./leave-room-button"
+import { RematchButton } from "@/components/rematch-button"
 
 interface Props {
   params: Promise<{
@@ -78,6 +79,9 @@ export default async function RoomPage({ params }: Props) {
 
   // Only allow starting a game if the room is in 'waiting' status
   const canStartGame = room.status === "waiting"
+
+  // Show Rejoin Rematch button for non-hosts if room is waiting
+  const showRejoinRematch = !isHost && room.status === 'waiting'
 
   // After checking if the game is finished
   if (isGameFinished) {
@@ -296,6 +300,11 @@ export default async function RoomPage({ params }: Props) {
             </div>
           </div>
         </main>
+        {showRejoinRematch && (
+          <div className="mt-6 flex justify-center">
+            <RematchButton roomId={id} isHost={false} roomStatus={room.status} />
+          </div>
+        )}
       </div>
     </RoomRealtime>
   )

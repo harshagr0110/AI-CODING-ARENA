@@ -193,6 +193,17 @@ export async function evaluateCode(code: string, challenge: any): Promise<CodeEv
       // Ensure score is within valid range
       evaluation.score = Math.max(0, Math.min(100, Math.round(evaluation.score)));
 
+      // Compare time complexity if required
+      if (challenge.recommendedTimeComplexity && evaluation.timeComplexity) {
+        // Simple string comparison (can be improved with a complexity ranking map)
+        const required = challenge.recommendedTimeComplexity.trim()
+        const actual = evaluation.timeComplexity.trim()
+        if (required !== actual) {
+          evaluation.isCorrect = false
+          evaluation.feedback += ` Solution time complexity (${actual}) is worse than required (${required}).`
+        }
+      }
+
       return evaluation;
 
     } catch (parseError) {

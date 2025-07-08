@@ -49,6 +49,7 @@ model Room {
   startedAt            DateTime? @map("started_at")
   endedAt              DateTime? @map("ended_at")
   durationSeconds      Int?      @map("duration_seconds")
+  recommendedTimeComplexity String?   @map("recommended_time_complexity")
 
   // Relations
   creator       User             @relation("RoomCreator", fields: [createdBy], references: [id])

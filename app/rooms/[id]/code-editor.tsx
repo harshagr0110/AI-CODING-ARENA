@@ -22,16 +22,20 @@ export function CodeEditor({ roomId, userId }: CodeEditorProps) {
   const [submitted, setSubmitted] = useState(false)
   const [disqualified, setDisqualified] = useState(false)
   const [mode, setMode] = useState('normal')
+  const [recommendedTimeComplexity, setRecommendedTimeComplexity] = useState<string | null>(null)
   const lastLengthRef = useRef(0)
   const timerRef = useRef<NodeJS.Timeout | null>(null)
   const router = useRouter()
   const { socket, isConnected } = useSocket()
 
   useEffect(() => {
-    // Fetch mode from backend (room info)
+    // Fetch mode and recommended time complexity from backend (room info)
     fetch(`/api/rooms/${roomId}`)
       .then(res => res.json())
-      .then(data => setMode(data.mode || 'normal'))
+      .then(data => {
+        setMode(data.mode || 'normal')
+        setRecommendedTimeComplexity(data.recommendedTimeComplexity || null)
+      })
   }, [roomId])
 
   useEffect(() => {
@@ -161,6 +165,11 @@ export function CodeEditor({ roomId, userId }: CodeEditorProps) {
     <Card>
       <CardHeader>
         <CardTitle>Your Solution</CardTitle>
+        {recommendedTimeComplexity && (
+          <div className="mt-2 text-sm text-blue-700">
+            <b>Required Time Complexity:</b> {recommendedTimeComplexity}
+          </div>
+        )}
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">

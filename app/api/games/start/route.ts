@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
         durationSeconds: durationSeconds || 300,
         status: "in_progress",
         mode: mode,
+        recommendedTimeComplexity: challenge.recommendedTimeComplexity || null,
       },
     })
 

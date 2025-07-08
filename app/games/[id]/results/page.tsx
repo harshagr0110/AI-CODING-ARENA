@@ -57,6 +57,7 @@ export default async function GameResultsPage({ params }: Props) {
         orderBy: { score: "desc" },
         take: 10,
       },
+      recommendedTimeComplexity: true,
     },
   })
 
@@ -74,6 +75,9 @@ export default async function GameResultsPage({ params }: Props) {
       </div>
     )
   }
+
+  // Type assertion for room to include recommendedTimeComplexity
+  const typedRoom = room as typeof room & { recommendedTimeComplexity?: string }
 
   // Find user submission
   const userSubmission = room.submissions.find((s: typeof room.submissions[0]) => s.userId === user.id)
@@ -101,6 +105,10 @@ export default async function GameResultsPage({ params }: Props) {
   }
   // For Continuous Writing, show disqualified players
   const disqualifiedIds = room.submissions.filter((s: any) => s.aiFeedback === 'disqualified').map((s: any) => s.userId)
+  // Treat disqualified as wrong answers in summary/leaderboard
+  const wrongIds = room.submissions.filter((s: any) => !s.isCorrect || s.aiFeedback === 'disqualified').map((s: any) => s.userId)
+
+  const isHost = room.creator.id === user.id
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -154,6 +162,11 @@ export default async function GameResultsPage({ params }: Props) {
                   ))}
                 </div>
               </div>
+              {typedRoom.recommendedTimeComplexity && (
+                <div className="mt-2 text-sm text-blue-700">
+                  <b>Required Time Complexity:</b> {typedRoom.recommendedTimeComplexity}
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -253,10 +266,10 @@ export default async function GameResultsPage({ params }: Props) {
           <Link href="/dashboard">
             <Button>Back to Dashboard</Button>
           </Link>
-          {/* Rematch button for host only */}
-          {room.creator.username === user.username && (
-            <RematchButton roomId={room.id} />
-          )}
+          {/* Rematch Button Section */}
+          <div className="mt-6 flex justify-center">
+            <RematchButton roomId={room.id} isHost={isHost} roomStatus={room.status} />
+          </div>
         </div>
       </main>
     </div>
