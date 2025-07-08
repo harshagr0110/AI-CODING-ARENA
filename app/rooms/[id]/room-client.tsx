@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { useSocket } from "@/hooks/use-socket"
 
 interface RoomClientProps {
   roomId: string
@@ -15,6 +16,7 @@ export function RoomClient({ roomId, userId, initialJoined }: RoomClientProps) {
   const [hasJoined, setHasJoined] = useState(initialJoined)
   const [loading, setLoading] = useState(false)
   const router = useRouter()
+  const { socket, isConnected } = useSocket()
 
   const handleJoinRoom = async () => {
     setLoading(true)
@@ -29,6 +31,10 @@ export function RoomClient({ roomId, userId, initialJoined }: RoomClientProps) {
       }
 
       setHasJoined(true)
+      // Emit join-room event via socket for real-time update
+      if (socket && isConnected) {
+        socket.emit("join-room", { roomId, userId })
+      }
       // Refresh the page to show updated player list
       router.refresh()
     } catch (error) {

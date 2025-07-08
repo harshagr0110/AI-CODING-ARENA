@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import io from 'socket.io-client'
+
+const socket = io(process.env.NEXT_PUBLIC_SOCKET_IO_URL || 'http://localhost:3001')
 
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
@@ -16,6 +19,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
         userId: user.id,
       },
     })
+
+    // Emit player-left event to the room
+    socket.emit('player-left', { roomId, userId: user.id })
     
     return NextResponse.json({ success: true })
   } catch (err) {

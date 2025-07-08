@@ -38,15 +38,11 @@ export function RoomRealtime({ roomId, userId, children }: RoomRealtimeProps) {
       })
 
       socket.on("player-joined", () => {
-        setTimeout(() => {
-          router.refresh()
-        }, 700)
+        router.refresh()
       })
 
       socket.on("player-left", () => {
-        setTimeout(() => {
-          router.refresh()
-        }, 700)
+        router.refresh()
       })
 
       // Cleanup when component unmounts
