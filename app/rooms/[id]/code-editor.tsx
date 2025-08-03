@@ -5,9 +5,9 @@ import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { useSocket } from "@/hooks/use-socket"
+import { MonacoCodeEditor } from "@/components/monaco-code-editor"
 import { Send, Loader2 } from "lucide-react"
 
 interface CodeEditorProps {
@@ -34,7 +34,9 @@ export function CodeEditor({ roomId, userId }: CodeEditorProps) {
       .then(res => res.json())
       .then(data => {
         setMode(data.mode || 'normal')
-        setRecommendedTimeComplexity(data.recommendedTimeComplexity || null)
+        if (data.question?.recommendedTimeComplexity) {
+          setRecommendedTimeComplexity(data.question.recommendedTimeComplexity)
+        }
       })
   }, [roomId])
 
@@ -184,14 +186,15 @@ export function CodeEditor({ roomId, userId }: CodeEditorProps) {
               <option value="python">Python</option>
               <option value="cpp">C++</option>
               <option value="java">Java</option>
+              <option value="c">C</option>
             </select>
           </div>
 
-          <Textarea
+          <MonacoCodeEditor
             value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder={`Write your ${language} solution here...`}
-            className="min-h-[300px] font-mono text-sm"
+            onChange={setCode}
+            language={language}
+            height="400px"
           />
 
           <Button type="submit" disabled={loading || !code.trim()} className="w-full" size="lg">

@@ -32,6 +32,7 @@ export default async function RoomPage({ params }: Props) {
     where: { id },
     include: {
       creator: { select: { id: true, username: true } },
+      question: true,
       participants: {
         include: {
           user: { select: { id: true, username: true } },
@@ -60,7 +61,7 @@ export default async function RoomPage({ params }: Props) {
   const isUserInRoom = room.participants.some((p: any) => p.user.id === user.id) || isHost
   const participantCount = room.participants.length
   const allPlayers = [room.creator, ...room.participants.map((p: any) => p.user)]
-  const hasRealChallenge = room.challengeTitle && room.challengeTitle !== "Waiting for challenge..."
+  const hasRealChallenge = room.question && room.status === "in_progress"
 
   // Check if user has submitted
   let userSubmission = null
@@ -151,13 +152,13 @@ export default async function RoomPage({ params }: Props) {
                         <span>🎯 {room.challengeTitle}</span>
                         <span>{room.difficulty}</span>
                       </CardTitle>
-                    </CardHeader>
+            {hasRealChallenge && room.question ? (
                     <CardContent>
                       <div className="space-y-4">
                         <div>
                           <h4 className="font-medium mb-2">📝 Problem Description</h4>
                           <p className="text-gray-700 whitespace-pre-wrap">{room.challengeDescription}</p>
-                        </div>
+                      <span>🎯 {room.question.title}</span>
                         <div>
                           <h4 className="font-medium mb-2">💡 Examples</h4>
                           <div className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
@@ -165,12 +166,12 @@ export default async function RoomPage({ params }: Props) {
                               <div key={index} className="mb-3 last:mb-0">
                                 <div className="font-medium text-gray-800">Example {index + 1}:</div>
                                 <div className="mt-1">
-                                  <div>
+                        <p className="text-gray-700 whitespace-pre-wrap">{room.question.description}</p>
                                     <span className="font-medium">Input:</span> {example.input}
                                   </div>
                                   <div>
                                     <span className="font-medium">Output:</span> {example.output}
-                                  </div>
+                                  <span className="font-medium">Output:</span> {example.expectedOutput}
                                   {example.explanation && (
                                     <div className="text-gray-600">
                                       <span className="font-medium">Explanation:</span> {example.explanation}
@@ -182,6 +183,11 @@ export default async function RoomPage({ params }: Props) {
                           </div>
                         </div>
                       </div>
+                      {room.question.recommendedTimeComplexity && (
+                        <div className="mt-2 text-sm text-blue-700">
+                          <b>Required Time Complexity:</b> {room.question.recommendedTimeComplexity}
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
                   {/* Show code editor only if user is a participant and game is active */}

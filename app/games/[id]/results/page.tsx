@@ -27,9 +27,6 @@ export default async function GameResultsPage({ params }: Props) {
     where: { id },
     select: {
       id: true,
-      challengeTitle: true,
-      challengeDescription: true,
-      challengeExamples: true,
       durationSeconds: true,
       startedAt: true,
       endedAt: true,
@@ -40,6 +37,7 @@ export default async function GameResultsPage({ params }: Props) {
       mode: true,
       creator: { select: { username: true, id: true } },
       winner: { select: { username: true, id: true } },
+      question: true,
       participants: { select: { user: { select: { username: true, id: true } } } },
       submissions: {
         select: {
@@ -48,16 +46,15 @@ export default async function GameResultsPage({ params }: Props) {
           isCorrect: true,
           score: true,
           language: true,
-          timeComplexity: true,
+          executionTime: true,
           submittedAt: true,
           code: true,
-          aiFeedback: true,
+          feedback: true,
           user: { select: { username: true } },
         },
         orderBy: { score: "desc" },
         take: 10,
       },
-      recommendedTimeComplexity: true,
     },
   })
 
@@ -76,8 +73,6 @@ export default async function GameResultsPage({ params }: Props) {
     )
   }
 
-  // Type assertion for room to include recommendedTimeComplexity
-  const typedRoom = room as typeof room & { recommendedTimeComplexity?: string }
 
   // Find user submission
   const userSubmission = room.submissions.find((s: typeof room.submissions[0]) => s.userId === user.id)
@@ -104,9 +99,9 @@ export default async function GameResultsPage({ params }: Props) {
     }
   }
   // For Continuous Writing, show disqualified players
-  const disqualifiedIds = room.submissions.filter((s: any) => s.aiFeedback === 'disqualified').map((s: any) => s.userId)
+  const disqualifiedIds = room.submissions.filter((s: any) => s.feedback === 'disqualified').map((s: any) => s.userId)
   // Treat disqualified as wrong answers in summary/leaderboard
-  const wrongIds = room.submissions.filter((s: any) => !s.isCorrect || s.aiFeedback === 'disqualified').map((s: any) => s.userId)
+  const wrongIds = room.submissions.filter((s: any) => !s.isCorrect || s.feedback === 'disqualified').map((s: any) => s.userId)
 
   const isHost = room.creator.id === user.id
 
@@ -117,7 +112,7 @@ export default async function GameResultsPage({ params }: Props) {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Game Results</h1>
-              <p className="text-gray-600">{room.challengeTitle}</p>
+              <p className="text-gray-600">{room.question?.title || "Unknown Challenge"}</p>
             </div>
             <Badge variant={room.status === "finished" ? "outline" : "default"}>{room.status}</Badge>
           </div>
@@ -126,50 +121,52 @@ export default async function GameResultsPage({ params }: Props) {
 
       <main className="container mx-auto px-4 py-8">
         {/* Always show the challenge/question for this game */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <span>🎯 {room.challengeTitle}</span>
-              <span>{room.status}</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div>
-                <h4 className="font-medium mb-2">📝 Problem Description</h4>
-                <p className="text-gray-700 whitespace-pre-wrap">{room.challengeDescription}</p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">💡 Examples</h4>
-                <div className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
-                  {JSON.parse(room.challengeExamples || '[]').map((example: any, index: number) => (
-                    <div key={index} className="mb-3 last:mb-0">
-                      <div className="font-medium text-gray-800">Example {index + 1}:</div>
-                      <div className="mt-1">
-                        <div>
-                          <span className="font-medium">Input:</span> {example.input}
-                        </div>
-                        <div>
-                          <span className="font-medium">Output:</span> {example.output}
-                        </div>
-                        {example.explanation && (
-                          <div className="text-gray-600">
-                            <span className="font-medium">Explanation:</span> {example.explanation}
+        {room.question && (
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2">
+                <span>🎯 {room.question.title}</span>
+                <span>{room.status}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <h4 className="font-medium mb-2">📝 Problem Description</h4>
+                  <p className="text-gray-700 whitespace-pre-wrap">{room.question.description}</p>
+                </div>
+                <div>
+                  <h4 className="font-medium mb-2">💡 Examples</h4>
+                  <div className="bg-gray-100 p-3 rounded text-sm overflow-x-auto">
+                    {(room.question.testCases as any[]).slice(0, 3).map((example: any, index: number) => (
+                      <div key={index} className="mb-3 last:mb-0">
+                        <div className="font-medium text-gray-800">Example {index + 1}:</div>
+                        <div className="mt-1">
+                          <div>
+                            <span className="font-medium">Input:</span> {example.input}
                           </div>
-                        )}
+                          <div>
+                            <span className="font-medium">Output:</span> {example.expectedOutput}
+                          </div>
+                          {example.explanation && (
+                            <div className="text-gray-600">
+                              <span className="font-medium">Explanation:</span> {example.explanation}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
+                {room.question.recommendedTimeComplexity && (
+                  <div className="mt-2 text-sm text-blue-700">
+                    <b>Required Time Complexity:</b> {room.question.recommendedTimeComplexity}
+                  </div>
+                )}
               </div>
-              {typedRoom.recommendedTimeComplexity && (
-                <div className="mt-2 text-sm text-blue-700">
-                  <b>Required Time Complexity:</b> {typedRoom.recommendedTimeComplexity}
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Game Summary */}

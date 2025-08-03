@@ -1,7 +1,7 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { evaluateCode } from "@/lib/gemini"
+import { executeCode } from "@/lib/piston"
 import io from 'socket.io-client'
 
 const socket = io(process.env.NEXT_PUBLIC_SOCKET_IO_URL || 'http://localhost:3001')
@@ -11,10 +11,15 @@ export async function POST(request: NextRequest) {
     const user = await getCurrentUser()
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-    const { roomId, code, language = "cpp", aiFeedback, isCorrect } = await request.json()
+    const { roomId, code, language = "javascript", feedback, isCorrect } = await request.json()
     if (!roomId || !code) return NextResponse.json({ error: "Room ID and code are required" }, { status: 400 })
 
-    const room = await prisma.room.findUnique({ where: { id: roomId } })
+    const room = await prisma.room.findUnique({ 
+      where: { id: roomId },
+      include: {
+        question: true
+      }
+    })
     if (!room || room.status !== "in_progress")
       return NextResponse.json({ error: "Room not found or game not active" }, { status: 400 })
 
@@ -22,29 +27,37 @@ export async function POST(request: NextRequest) {
     if (existingSubmission)
       return NextResponse.json({ error: "You have already submitted a solution" }, { status: 400 })
 
-    const challenge = {
-      title: room.challengeTitle || "Coding Challenge",
-      description: room.challengeDescription || "",
-      examples: room.challengeExamples ? JSON.parse(room.challengeExamples) : [],
+    if (!room.question) {
+      return NextResponse.json({ error: "No question associated with this room" }, { status: 400 })
     }
 
     let evaluation
-    if (aiFeedback === 'disqualified') {
+    if (feedback === 'disqualified') {
       evaluation = {
         isCorrect: false,
         feedback: 'disqualified',
-        score: 0,
-        timeComplexity: 'N/A',
-        spaceComplexity: 'N/A',
+        executionTime: 0,
+        memoryUsed: 0,
+        testResults: [],
       }
     } else {
-      evaluation = await evaluateCode(code, challenge).catch(() => ({
+      evaluation = await executeCode(code, language, room.question.testCases as any[]).catch(() => ({
         isCorrect: false,
-        feedback: "Evaluation failed. Please try again.",
-        score: 0,
-        timeComplexity: "Unknown",
-        spaceComplexity: "Unknown",
+        feedback: "Code execution failed. Please try again.",
+        executionTime: 0,
+        memoryUsed: 0,
+        testResults: [],
       }))
+    }
+
+    // Calculate score based on correctness and execution time
+    let score = 0
+    if (evaluation.isCorrect) {
+      score = 100
+      // Bonus points for faster execution (up to 20 extra points)
+      if (evaluation.executionTime < 1000) { // Less than 1 second
+        score += Math.max(0, 20 - Math.floor(evaluation.executionTime / 50))
+      }
     }
 
     const submission = await prisma.submission.create({
@@ -55,10 +68,10 @@ export async function POST(request: NextRequest) {
         code: code.trim(),
         language,
         isCorrect: evaluation.isCorrect,
-        aiFeedback: evaluation.feedback,
-        timeComplexity: evaluation.timeComplexity,
-        spaceComplexity: evaluation.spaceComplexity,
-        score: evaluation.score,
+        feedback: evaluation.feedback,
+        executionTime: evaluation.executionTime,
+        memoryUsed: evaluation.memoryUsed,
+        score: score,
       },
     })
 
@@ -138,9 +151,9 @@ export async function POST(request: NextRequest) {
         id: submission.id,
         isCorrect: submission.isCorrect,
         score: submission.score,
-        aiFeedback: submission.aiFeedback,
-        timeComplexity: submission.timeComplexity,
-        spaceComplexity: submission.spaceComplexity,
+        feedback: submission.feedback,
+        executionTime: submission.executionTime,
+        memoryUsed: submission.memoryUsed,
       },
     })
   } catch (error) {

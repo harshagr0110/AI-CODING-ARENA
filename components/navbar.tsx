@@ -11,8 +11,9 @@ import { cn } from "@/lib/utils"
 const navigation = [
   { name: "Home", href: "/", icon: Home },
   { name: "Dashboard", href: "/dashboard", icon: Users },
+  { name: "Practice", href: "/practice", icon: Code },
   { name: "Leaderboard", href: "/leaderboard", icon: Trophy },
-  { name: "About", href: "/about", icon: Code },
+  { name: "Questions", href: "/questions", icon: Code },
 ]
 
 export function Navbar() {

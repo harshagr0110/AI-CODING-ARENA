@@ -1,7 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getCurrentUser } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
-import { generateCodingChallenge } from "@/lib/gemini"
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,45 +48,34 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Need at least 2 players to start" }, { status: 400 })
     }
 
-    // Generate AI challenge with fallback
-    let challenge
-    try {
-      challenge = await generateCodingChallenge(difficulty)
-    } catch (aiError) {
-      console.error("AI challenge generation failed:", aiError)
-      // Fallback challenge
-      challenge = {
-        title: "Two Sum Problem",
-        description:
-          "Given an array of integers nums and an integer target, return indices of the two numbers such that they add up to target.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.\n\nYou can return the answer in any order.",
-        examples: [
-          {
-            input: "nums = [2,7,11,15], target = 9",
-            output: "[0,1]",
-            explanation: "Because nums[0] + nums[1] == 9, we return [0, 1].",
-          },
-          {
-            input: "nums = [3,2,4], target = 6",
-            output: "[1,2]",
-            explanation: "Because nums[1] + nums[2] == 6, we return [1, 2].",
-          },
-        ],
-      }
+    // Get a random question from the database based on difficulty and mode
+    const questionType = mode === 'debugging' ? 'debugging' : 'normal'
+    const questions = await prisma.question.findMany({
+      where: {
+        difficulty: difficulty,
+        questionType: questionType,
+      },
+    })
+
+    if (questions.length === 0) {
+      return NextResponse.json({ 
+        error: `No ${difficulty} ${questionType} questions available. Please add some questions first.` 
+      }, { status: 400 })
     }
+
+    // Select a random question
+    const randomQuestion = questions[Math.floor(Math.random() * questions.length)]
 
     // Update the room with the game data
     const updatedRoom = await prisma.room.update({
       where: { id: roomId },
       data: {
-        challengeTitle: challenge.title,
-        challengeDescription: challenge.description,
-        challengeExamples: JSON.stringify(challenge.examples),
+        questionId: randomQuestion.id,
         difficulty: difficulty,
         startedAt: new Date(),
         durationSeconds: durationSeconds || 300,
         status: "in_progress",
         mode: mode,
-        recommendedTimeComplexity: challenge.recommendedTimeComplexity || null,
       },
     })
 

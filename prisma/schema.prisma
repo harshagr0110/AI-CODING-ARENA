@@ -23,6 +23,7 @@ model User {
   submissions      Submission[]
   wonGames         Room[]            @relation("GameWinner")
   roomParticipants RoomParticipant[]
+  createdQuestions Question[]        @relation("QuestionCreator")
 
   @@map("users")
 }
@@ -41,25 +42,41 @@ model Room {
   mode                 String?   @default("normal")
   
   // Game fields (merged from Game model)
-  challengeTitle       String?   @map("challenge_title")
-  challengeDescription String?   @map("challenge_description")
-  challengeExamples    String?   @map("challenge_examples")
+  questionId           String?   @map("question_id")
   difficulty           String?   @default("medium")
   winnerId             String?   @map("winner_id")
   startedAt            DateTime? @map("started_at")
   endedAt              DateTime? @map("ended_at")
   durationSeconds      Int?      @map("duration_seconds")
-  recommendedTimeComplexity String?   @map("recommended_time_complexity")
 
   // Relations
   creator       User             @relation("RoomCreator", fields: [createdBy], references: [id])
   winner        User?            @relation("GameWinner", fields: [winnerId], references: [id])
+  question      Question?        @relation(fields: [questionId], references: [id])
   participants  RoomParticipant[]
   submissions   Submission[]
 
   @@map("rooms")
 }
 
+model Question {
+  id                    String   @id @default(uuid())
+  title                 String
+  description           String
+  difficulty            String   @default("medium") // easy, medium, hard
+  recommendedTimeComplexity String? @map("recommended_time_complexity")
+  testCases             Json     @map("test_cases") // Array of {input, expectedOutput, explanation?}
+  questionType          String   @default("normal") @map("question_type") // normal, debugging, puzzle
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+  createdBy             String   @map("created_by")
+
+  // Relations
+  creator               User     @relation("QuestionCreator", fields: [createdBy], references: [id])
+  rooms                 Room[]
+
+  @@map("questions")
+}
 model Submission {
   id              String   @id
   roomId          String   @map("room_id")
@@ -67,10 +84,12 @@ model Submission {
   code            String
   language        String   @default("javascript")
   isCorrect       Boolean  @default(false) @map("is_correct")
-  aiFeedback      String?  @map("ai_feedback")
+  feedback        String?  @map("feedback")
   timeComplexity  String?  @map("time_complexity")
   spaceComplexity String?  @map("space_complexity")
   score           Int      @default(0)
+  executionTime   Int?     @default(0) @map("execution_time") // in milliseconds
+  memoryUsed      Int?     @default(0) @map("memory_used") // in KB
   submittedAt     DateTime @default(now()) @map("submitted_at")
 
   // Relations
